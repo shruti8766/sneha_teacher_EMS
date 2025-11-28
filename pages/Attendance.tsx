@@ -1,0 +1,501 @@
+
+import React, { useEffect, useState } from 'react';
+import { api } from '../services/api';
+import { ApiListResponse, AttendanceSession, Batch, Student } from '../types';
+import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
+import { Loader2, Plus, Calendar, Clock, CheckCircle, XCircle, AlertCircle, UserIcon, Edit2, Trash2 } from 'lucide-react';
+import Modal from '../components/Modal';
+
+const Attendance: React.FC = () => {
+  const [sessions, setSessions] = useState<AttendanceSession[]>([]);
+  const [batches, setBatches] = useState<Batch[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { showToast } = useToast();
+  const { user } = useAuth();
+
+  // Create Session State
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingSession, setEditingSession] = useState<AttendanceSession | null>(null);
+  const [createForm, setCreateForm] = useState({
+    batchIds: [] as string[],
+    date: new Date().toISOString().slice(0, 10),
+    subject: '',
+    startTime: '09:00',
+    endTime: '10:00',
+    topic: ''
+  });
+
+  // Mark Attendance State
+  const [isMarkModalOpen, setIsMarkModalOpen] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<AttendanceSession | null>(null);
+  const [studentsInBatch, setStudentsInBatch] = useState<Student[]>([]);
+  const [markLoading, setMarkLoading] = useState(false);
+  const [attendanceData, setAttendanceData] = useState<{[studentId: string]: 'present' | 'absent' | 'late'}>({});
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [sessionsRes, batchesRes] = await Promise.all([
+        api.get<ApiListResponse<AttendanceSession>>('/attendance/sessions?limit=50'),
+        api.get<ApiListResponse<Batch>>('/batches?limit=100')
+      ]);
+      setSessions(sessionsRes.items || []);
+      setBatches(batchesRes.items || []);
+    } catch (error) {
+      showToast('Failed to load attendance data', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const handleCreateSession = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // If editing existing session
+    if (editingSession) {
+      try {
+        await api.put(`/attendance/sessions/${editingSession.id}`, {
+          date: createForm.date,
+          subject: createForm.subject,
+          startTime: createForm.startTime,
+          endTime: createForm.endTime,
+          topic: createForm.topic
+        });
+        showToast('Session updated successfully');
+        setIsCreateModalOpen(false);
+        setEditingSession(null);
+        setCreateForm({
+          batchIds: [],
+          date: new Date().toISOString().slice(0, 10),
+          subject: '',
+          startTime: '09:00',
+          endTime: '10:00',
+          topic: ''
+        });
+        loadData();
+      } catch (error: any) {
+        showToast(error.message || 'Failed to update session', 'error');
+      }
+      return;
+    }
+    
+    // Creating new session(s)
+    if (createForm.batchIds.length === 0) {
+      showToast('Please select at least one batch', 'error');
+      return;
+    }
+    
+    try {
+      // Create session for each selected batch
+      await Promise.all(createForm.batchIds.map(batchId =>
+        api.post('/attendance/sessions', {
+          batchId,
+          date: createForm.date,
+          subject: createForm.subject,
+          startTime: createForm.startTime,
+          endTime: createForm.endTime,
+          topic: createForm.topic
+        })
+      ));
+      showToast('Attendance session(s) created successfully');
+      setIsCreateModalOpen(false);
+      setCreateForm({
+        batchIds: [],
+        date: new Date().toISOString().slice(0, 10),
+        subject: '',
+        startTime: '09:00',
+        endTime: '10:00',
+        topic: ''
+      });
+      loadData();
+    } catch (error: any) {
+      showToast(error.message || 'Failed to create session', 'error');
+    }
+  };
+
+  const toggleBatch = (batchId: string) => {
+    setCreateForm(prev => ({
+      ...prev,
+      batchIds: prev.batchIds.includes(batchId)
+        ? prev.batchIds.filter(id => id !== batchId)
+        : [...prev.batchIds, batchId]
+    }));
+  };
+
+  const handleEditSession = (session: AttendanceSession) => {
+    setEditingSession(session);
+    setCreateForm({
+      batchIds: [session.batchId],
+      date: session.date,
+      subject: session.subject,
+      startTime: session.startTime || '09:00',
+      endTime: session.endTime || '10:00',
+      topic: session.topic || ''
+    });
+    setIsCreateModalOpen(true);
+  };
+
+  const handleDeleteSession = async (session: AttendanceSession) => {
+    if (!window.confirm(`Are you sure you want to delete this session?\n\nBatch: ${getBatchName(session.batchId)}\nSubject: ${session.subject}\nDate: ${new Date(session.date).toLocaleDateString()}`)) {
+      return;
+    }
+    
+    try {
+      await api.delete(`/attendance/sessions/${session.id}`);
+      showToast('Session deleted successfully');
+      loadData();
+    } catch (error: any) {
+      showToast(error.message || 'Failed to delete session', 'error');
+    }
+  };
+
+  const openMarkModal = async (session: AttendanceSession) => {
+    setSelectedSession(session);
+    setIsMarkModalOpen(true);
+    setStudentsInBatch([]);
+    setAttendanceData({});
+    
+    // Load students for this batch
+    try {
+      const batch = batches.find(b => b.id === session.batchId);
+      if (batch && batch.studentIds && batch.studentIds.length > 0) {
+        const studentsRes = await api.get<ApiListResponse<Student>>('/students?limit=1000');
+        const filtered = studentsRes.items.filter(s => batch.studentIds.includes(s.id));
+        setStudentsInBatch(filtered);
+        
+        // Initialize attendance data with all students as 'present' by default
+        const initialAttendance: {[key: string]: 'present' | 'absent' | 'late'} = {};
+        filtered.forEach(student => {
+          initialAttendance[student.id] = 'present';
+        });
+        setAttendanceData(initialAttendance);
+      }
+    } catch (error) {
+      console.error("Error loading students for batch", error);
+    }
+  };
+
+  const handleBulkMarkAttendance = async () => {
+    if (!selectedSession) return;
+    setMarkLoading(true);
+    try {
+      // Mark attendance for all students
+      await Promise.all(
+        Object.entries(attendanceData).map(([studentId, status]) =>
+          api.post('/attendance/mark', {
+            sessionId: selectedSession.id,
+            studentId,
+            status
+          })
+        )
+      );
+      showToast('Attendance marked successfully for all students');
+      setIsMarkModalOpen(false);
+      setAttendanceData({});
+    } catch (error: any) {
+      showToast(error.message || 'Failed to mark attendance', 'error');
+    } finally {
+      setMarkLoading(false);
+    }
+  };
+
+  const updateStudentAttendance = (studentId: string, status: 'present' | 'absent' | 'late') => {
+    setAttendanceData(prev => ({
+      ...prev,
+      [studentId]: status
+    }));
+  };
+
+  const markAllAs = (status: 'present' | 'absent' | 'late') => {
+    const newData: {[key: string]: 'present' | 'absent' | 'late'} = {};
+    studentsInBatch.forEach(student => {
+      newData[student.id] = status;
+    });
+    setAttendanceData(newData);
+  };
+
+  const getBatchName = (id: string) => {
+    const b = batches.find(batch => batch.id === id);
+    return b ? b.name : id;
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-gray-800">Attendance</h1>
+        {(user?.role === 'admin' || user?.role === 'teacher') && (
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="bg-indigo-600 text-white px-6 py-2.5 rounded-lg hover:bg-indigo-700 transition flex items-center gap-2 font-medium shadow-sm"
+          >
+            <Plus size={20} /> Create Session
+          </button>
+        )}
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center p-8"><Loader2 className="animate-spin text-indigo-600" /></div>
+      ) : sessions.length === 0 ? (
+        <div className="text-center text-gray-500 p-8 bg-white rounded-xl border border-gray-100">No attendance sessions found.</div>
+      ) : (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <table className="w-full text-left">
+            <thead className="bg-gray-50 border-b border-gray-100">
+              <tr>
+                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Date</th>
+                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Batch</th>
+                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Subject</th>
+                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Time</th>
+                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {sessions.map(session => (
+                <tr key={session.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2 font-medium text-gray-900">
+                      <Calendar size={16} className="text-gray-400" />
+                      {new Date(session.date).toLocaleDateString()}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="px-2 py-1 bg-indigo-50 text-indigo-700 rounded text-xs font-medium">
+                      {getBatchName(session.batchId)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-700">{session.subject}</td>
+                  <td className="px-6 py-4 text-sm text-gray-500 flex items-center gap-1">
+                    <Clock size={14} /> {session.startTime} - {session.endTime}
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex items-center justify-end gap-3">
+                      {(user?.role === 'admin' || user?.role === 'teacher') && (
+                        <>
+                          <button
+                            onClick={() => handleEditSession(session)}
+                            className="text-indigo-600 hover:text-indigo-800 transition"
+                            title="Edit Session"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteSession(session)}
+                            className="text-red-600 hover:text-red-800 transition"
+                            title="Delete Session"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </>
+                      )}
+                      <button 
+                        onClick={() => openMarkModal(session)}
+                        className="text-sm text-blue-600 hover:text-blue-800 font-medium hover:underline"
+                      >
+                        Mark Attendance
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Create Session Modal */}
+      <Modal isOpen={isCreateModalOpen} onClose={() => {
+        setIsCreateModalOpen(false);
+        setEditingSession(null);
+        setCreateForm({
+          batchIds: [],
+          date: new Date().toISOString().slice(0, 10),
+          subject: '',
+          startTime: '09:00',
+          endTime: '10:00',
+          topic: ''
+        });
+      }} title={editingSession ? "Edit Attendance Session" : "Create Attendance Session"}>
+        <form onSubmit={handleCreateSession} className="space-y-4">
+          {!editingSession && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Batches * <span className="text-xs text-gray-500">({createForm.batchIds.length} selected)</span>
+              </label>
+              {batches.length > 0 ? (
+                <div className="max-h-48 overflow-y-auto border border-gray-300 rounded-lg p-3 space-y-2">
+                  {batches.map(batch => (
+                    <label key={batch.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={createForm.batchIds.includes(batch.id)}
+                        onChange={() => toggleBatch(batch.id)}
+                        className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 rounded"
+                      />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">{batch.name}</p>
+                        <p className="text-xs text-gray-500">{batch.subject} • Std {batch.standard}</p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg">No batches available. Please create a batch first.</p>
+              )}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Subject *</label>
+            <input required type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none bg-white text-gray-900" value={createForm.subject} onChange={e => setCreateForm({...createForm, subject: e.target.value})} placeholder="e.g. Mathematics" />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Topic</label>
+            <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none bg-white text-gray-900" value={createForm.topic} onChange={e => setCreateForm({...createForm, topic: e.target.value})} placeholder="e.g. Quadratic Equations" />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
+            <input required type="date" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none bg-white text-gray-900" value={createForm.date} onChange={e => setCreateForm({...createForm, date: e.target.value})} />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Start Time *</label>
+              <input required type="time" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none bg-white text-gray-900" value={createForm.startTime} onChange={e => setCreateForm({...createForm, startTime: e.target.value})} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">End Time *</label>
+              <input required type="time" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none bg-white text-gray-900" value={createForm.endTime} onChange={e => setCreateForm({...createForm, endTime: e.target.value})} />
+            </div>
+          </div>
+          <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+            <button type="button" onClick={() => {
+              setIsCreateModalOpen(false);
+              setEditingSession(null);
+              setCreateForm({
+                batchIds: [],
+                date: new Date().toISOString().slice(0, 10),
+                subject: '',
+                startTime: '09:00',
+                endTime: '10:00',
+                topic: ''
+              });
+            }} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition">Cancel</button>
+            <button type="submit" disabled={!editingSession && createForm.batchIds.length === 0} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition">
+              {editingSession ? 'Update Session' : `Create Session${createForm.batchIds.length > 1 ? 's' : ''}`}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Mark Attendance Modal */}
+      <Modal isOpen={isMarkModalOpen} onClose={() => setIsMarkModalOpen(false)} title={`Mark Attendance - ${selectedSession?.subject || ''}`}>
+        <div className="space-y-4">
+          {/* Session Info */}
+          <div className="bg-indigo-50 p-3 rounded-lg text-sm border border-indigo-200">
+            <p className="text-gray-700">
+              <span className="font-medium">Batch:</span> {selectedSession && getBatchName(selectedSession.batchId)} | 
+              <span className="font-medium ml-2">Date:</span> {selectedSession && new Date(selectedSession.date).toLocaleDateString()}
+            </p>
+            {selectedSession?.topic && <p className="text-gray-700 mt-1"><span className="font-medium">Topic:</span> {selectedSession.topic}</p>}
+            <p className="text-gray-700 mt-1">
+              <span className="font-medium">Time:</span> {selectedSession?.startTime || 'N/A'} - {selectedSession?.endTime || 'N/A'}
+            </p>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="flex gap-2 pb-3 border-b">
+            <button type="button" onClick={() => markAllAs('present')} className="flex-1 px-3 py-2 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition text-sm font-medium">
+              <CheckCircle className="inline mr-1 w-4 h-4" /> Mark All Present
+            </button>
+            <button type="button" onClick={() => markAllAs('absent')} className="flex-1 px-3 py-2 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition text-sm font-medium">
+              <XCircle className="inline mr-1 w-4 h-4" /> Mark All Absent
+            </button>
+            <button type="button" onClick={() => markAllAs('late')} className="flex-1 px-3 py-2 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-lg hover:bg-yellow-100 transition text-sm font-medium">
+              <AlertCircle className="inline mr-1 w-4 h-4" /> Mark All Late
+            </button>
+          </div>
+
+          {/* Students List */}
+          <div>
+            <p className="text-sm font-medium text-gray-700 mb-3">
+              Students ({studentsInBatch.length})
+            </p>
+            {studentsInBatch.length > 0 ? (
+              <div className="max-h-96 overflow-y-auto space-y-2">
+                {studentsInBatch.map(student => (
+                  <div key={student.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
+                    <div className="flex items-center gap-3">
+                      <UserIcon className="w-8 h-8 text-gray-400" />
+                      <div>
+                        <p className="font-medium text-gray-900">{student.name}</p>
+                        <p className="text-xs text-gray-500">{student.email}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => updateStudentAttendance(student.id, 'present')}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                          attendanceData[student.id] === 'present'
+                            ? 'bg-green-600 text-white'
+                            : 'bg-white text-green-600 border border-green-300 hover:bg-green-50'
+                        }`}
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateStudentAttendance(student.id, 'absent')}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                          attendanceData[student.id] === 'absent'
+                            ? 'bg-red-600 text-white'
+                            : 'bg-white text-red-600 border border-red-300 hover:bg-red-50'
+                        }`}
+                      >
+                        <XCircle className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateStudentAttendance(student.id, 'late')}
+                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                          attendanceData[student.id] === 'late'
+                            ? 'bg-yellow-600 text-white'
+                            : 'bg-white text-yellow-600 border border-yellow-300 hover:bg-yellow-50'
+                        }`}
+                      >
+                        <AlertCircle className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-red-500 text-sm bg-red-50 p-3 rounded-lg">No students found in this batch.</p>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+            <button type="button" onClick={() => setIsMarkModalOpen(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition">Cancel</button>
+            <button 
+              type="button" 
+              onClick={handleBulkMarkAttendance} 
+              disabled={studentsInBatch.length === 0}
+              className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition font-medium"
+            >
+              Save Attendance for All
+            </button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+};
+
+export default Attendance;
