@@ -99,9 +99,12 @@ const Dashboard: React.FC = () => {
           api.get<ApiListResponse<Batch>>('/batches?limit=100'),
         ]);
 
+        // Filter active teachers only (treat undefined/missing active field as true)
+        const activeTeachers = teachers.items.filter(t => t.active !== false);
+
         setStats({
           students: students.items.length,
-          teachers: teachers.items.length,
+          teachers: activeTeachers.length,
           tests: tests.items.filter(t => new Date(t.dateTime) > new Date()).length,
           batches: batches.items.length,
         });

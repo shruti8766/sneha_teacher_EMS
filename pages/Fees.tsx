@@ -1,10 +1,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
-import { ApiListResponse, Student } from '../types';
+import { ApiListResponse, Student, Batch } from '../types';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
-import { Loader2, Plus, DollarSign, Calendar, Search, CreditCard, FileText } from 'lucide-react';
+import { Loader2, Plus, DollarSign, Calendar, Search, CreditCard, FileText, Edit2, Trash2, Filter } from 'lucide-react';
 import Modal from '../components/Modal';
 import { BOARDS, STANDARDS } from '../constants';
 
@@ -38,12 +38,14 @@ const Fees: React.FC = () => {
   const [feePlans, setFeePlans] = useState<FeePlan[]>([]);
   const [summary, setSummary] = useState<FeeSummary[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
+  const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
   const { showToast } = useToast();
   const { user } = useAuth();
 
   // Create Plan Modal
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<FeePlan | null>(null);
   const [planForm, setPlanForm] = useState({
     name: '',
     amount: '',
@@ -72,6 +74,9 @@ const Fees: React.FC = () => {
   // Filter states
   const [period, setPeriod] = useState(new Date().toISOString().slice(0, 7));
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterBoard, setFilterBoard] = useState('');
+  const [filterStandard, setFilterStandard] = useState('');
+  const [filterBatch, setFilterBatch] = useState('');
 
   const loadFeePlans = async () => {
     try {
@@ -85,8 +90,23 @@ const Fees: React.FC = () => {
   const loadSummary = async () => {
     setLoading(true);
     try {
+      // Load students first to filter the summary
+      const studentsResponse = await api.get<ApiListResponse<Student>>('/students?limit=100');
+      const existingStudents = studentsResponse.items || [];
+      setStudents(existingStudents);
+      
+      // Create a Set of existing student IDs for fast lookup
+      const existingStudentIds = new Set(existingStudents.map(s => s.id));
+      
+      // Load fee summary
       const response = await api.get<ApiListResponse<FeeSummary>>(`/fees/summary?period=${period}`);
-      setSummary(response.items || []);
+      
+      // Filter summary to only include students that exist in the students list
+      const filteredSummary = (response.items || []).filter(
+        item => existingStudentIds.has(item.studentId)
+      );
+      
+      setSummary(filteredSummary);
     } catch (error) {
       showToast('Failed to load fee summary', 'error');
     } finally {
@@ -103,6 +123,15 @@ const Fees: React.FC = () => {
     }
   };
 
+  const loadBatches = async () => {
+    try {
+      const response = await api.get<ApiListResponse<Batch>>('/batches?limit=100');
+      setBatches(response.items || []);
+    } catch (error) {
+      // console.warn('Failed to load batches');
+    }
+  };
+
   useEffect(() => {
     // Always load fee plans because they are used in the "Assign Plan" modal
     // which is accessible from the "Fee Collection" tab.
@@ -110,7 +139,8 @@ const Fees: React.FC = () => {
 
     if (activeTab === 'collection') {
       loadSummary();
-      loadStudents();
+      loadBatches();
+      // No need to call loadStudents separately - it's now called inside loadSummary
     }
   }, [activeTab, period]);
 
@@ -122,13 +152,21 @@ const Fees: React.FC = () => {
         amount: parseFloat(planForm.amount),
         standard: parseInt(planForm.standard)
       };
-      await api.post('/fee-plans', payload);
-      showToast('Fee plan created successfully');
+      
+      if (editingPlan) {
+        await api.put(`/fee-plans/${editingPlan.id}`, payload);
+        showToast('Fee plan updated successfully');
+      } else {
+        await api.post('/fee-plans', payload);
+        showToast('Fee plan created successfully');
+      }
+      
       setIsPlanModalOpen(false);
+      setEditingPlan(null);
       setPlanForm({ name: '', amount: '', currency: 'INR', frequency: 'monthly', board: '', standard: '', subject: '' });
       loadFeePlans();
     } catch (error: any) {
-      showToast(error.message || 'Failed to create fee plan', 'error');
+      showToast(error.message || `Failed to ${editingPlan ? 'update' : 'create'} fee plan`, 'error');
     }
   };
 
@@ -198,10 +236,51 @@ const Fees: React.FC = () => {
     setIsAssignModalOpen(true);
   }
 
-  // Filter summary based on search
-  const filteredSummary = summary.filter(s => 
-    s.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleRemoveFeePlan = async (studentId: string, studentName: string) => {
+    if (!window.confirm(`Are you sure you want to remove the fee plan for "${studentName}"?`)) {
+      return;
+    }
+
+    try {
+      await api.delete(`/students/${studentId}/fee-plan`);
+      showToast('Fee plan removed successfully', 'success');
+      loadSummary();
+    } catch (error: any) {
+      showToast(error.message || 'Failed to remove fee plan', 'error');
+    }
+  };
+
+  // Filter summary based on search and filters
+  const filteredSummary = summary.filter(item => {
+    // Search filter
+    if (searchQuery && !item.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+      return false;
+    }
+
+    // Find the student data for this summary item
+    const student = students.find(s => s.id === item.studentId);
+    if (!student) return false;
+
+    // Board filter
+    if (filterBoard && student.board !== filterBoard) {
+      return false;
+    }
+
+    // Standard filter
+    if (filterStandard && student.standard.toString() !== filterStandard) {
+      return false;
+    }
+
+    // Batch filter
+    if (filterBatch) {
+      const batch = batches.find(b => b.id === filterBatch);
+      if (!batch || !batch.studentIds.includes(item.studentId)) {
+        return false;
+      }
+    }
+
+    return true;
+  });
 
   return (
     <div className="space-y-6">
@@ -227,18 +306,67 @@ const Fees: React.FC = () => {
 
       {activeTab === 'collection' && (
         <div className="space-y-4">
-          <div className="flex flex-col md:flex-row gap-4 justify-between bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-            <div className="flex gap-4 items-center flex-1">
+          {/* Filters Section */}
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 space-y-4">
+            <div className="flex items-center gap-2 text-gray-700 font-medium">
+              <Filter className="w-4 h-4" />
+              <span>Filters</span>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">Period</label>
                 <input 
                   type="month" 
                   value={period} 
                   onChange={(e) => setPeriod(e.target.value)} 
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none bg-white text-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none bg-white text-gray-900"
                 />
               </div>
-              <div className="flex-1">
+
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Board</label>
+                <select
+                  value={filterBoard}
+                  onChange={(e) => setFilterBoard(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none bg-white text-gray-900"
+                >
+                  <option value="">All Boards</option>
+                  {BOARDS.map(board => (
+                    <option key={board} value={board}>{board}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Standard</label>
+                <select
+                  value={filterStandard}
+                  onChange={(e) => setFilterStandard(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none bg-white text-gray-900"
+                >
+                  <option value="">All Standards</option>
+                  {STANDARDS.map(std => (
+                    <option key={std} value={std}>{std}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Batch</label>
+                <select
+                  value={filterBatch}
+                  onChange={(e) => setFilterBatch(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 outline-none bg-white text-gray-900"
+                >
+                  <option value="">All Batches</option>
+                  {batches.map(batch => (
+                    <option key={batch.id} value={batch.id}>{batch.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">Search Student</label>
                 <div className="relative">
                   <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -252,6 +380,9 @@ const Fees: React.FC = () => {
                 </div>
               </div>
             </div>
+          </div>
+
+          <div className="flex justify-end">
             <div className="flex items-end">
               <button 
                 onClick={() => openPaymentModal()}
@@ -307,12 +438,20 @@ const Fees: React.FC = () => {
                                 <FileText size={14} /> Assign Plan
                               </button>
                             ) : (
-                              <button 
-                                onClick={() => openPaymentModal(item.studentId)}
-                                className="text-blue-600 hover:text-blue-800 font-medium text-sm hover:underline"
-                              >
-                                Collect Fee
-                              </button>
+                              <div className="flex gap-2 justify-end">
+                                <button 
+                                  onClick={() => openPaymentModal(item.studentId)}
+                                  className="text-blue-600 hover:text-blue-800 font-medium text-sm hover:underline"
+                                >
+                                  Collect Fee
+                                </button>
+                                <button 
+                                  onClick={() => handleRemoveFeePlan(item.studentId, item.name)}
+                                  className="text-red-600 hover:text-red-800 font-medium text-sm hover:underline"
+                                >
+                                  Remove Plan
+                                </button>
+                              </div>
                             )}
                           </td>
                         </tr>
@@ -371,6 +510,46 @@ const Fees: React.FC = () => {
                       </div>
                     )}
                   </div>
+                  
+                  {user?.role === 'admin' && (
+                    <div className="flex gap-2 mt-4 pt-4 border-t border-gray-100">
+                      <button
+                        onClick={() => {
+                          setEditingPlan(plan);
+                          setPlanForm({
+                            name: plan.name,
+                            amount: plan.amount.toString(),
+                            currency: plan.currency,
+                            frequency: plan.frequency,
+                            board: plan.board,
+                            standard: plan.standard.toString(),
+                            subject: plan.subject || ''
+                          });
+                          setIsPlanModalOpen(true);
+                        }}
+                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                      >
+                        <Edit2 size={16} /> Edit
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!window.confirm(`Are you sure you want to delete "${plan.name}"?`)) {
+                            return;
+                          }
+                          try {
+                            await api.delete(`/fee-plans/${plan.id}`);
+                            showToast('Fee plan deleted successfully');
+                            loadFeePlans();
+                          } catch (error: any) {
+                            showToast(error.message || 'Failed to delete fee plan', 'error');
+                          }
+                        }}
+                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition"
+                      >
+                        <Trash2 size={16} /> Delete
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))
             )}
@@ -379,7 +558,11 @@ const Fees: React.FC = () => {
       )}
 
       {/* Create Plan Modal */}
-      <Modal isOpen={isPlanModalOpen} onClose={() => setIsPlanModalOpen(false)} title="Add Fee Plan">
+      <Modal isOpen={isPlanModalOpen} onClose={() => {
+        setIsPlanModalOpen(false);
+        setEditingPlan(null);
+        setPlanForm({ name: '', amount: '', currency: 'INR', frequency: 'monthly', board: '', standard: '', subject: '' });
+      }} title={editingPlan ? 'Edit Fee Plan' : 'Add Fee Plan'}>
         <form onSubmit={handleCreatePlan} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Plan Name *</label>
@@ -423,8 +606,14 @@ const Fees: React.FC = () => {
           </div>
 
           <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
-            <button type="button" onClick={() => setIsPlanModalOpen(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700">Create Plan</button>
+            <button type="button" onClick={() => {
+              setIsPlanModalOpen(false);
+              setEditingPlan(null);
+              setPlanForm({ name: '', amount: '', currency: 'INR', frequency: 'monthly', board: '', standard: '', subject: '' });
+            }} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
+            <button type="submit" className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700">
+              {editingPlan ? 'Update Plan' : 'Create Plan'}
+            </button>
           </div>
         </form>
       </Modal>

@@ -1,13 +1,15 @@
 
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { ApiListResponse, AttendanceSession, Batch, Student } from '../types';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
-import { Loader2, Plus, Calendar, Clock, CheckCircle, XCircle, AlertCircle, UserIcon, Edit2, Trash2 } from 'lucide-react';
+import { Loader2, Plus, Calendar, Clock, CheckCircle, XCircle, AlertCircle, UserIcon, Edit2, Trash2, List } from 'lucide-react';
 import Modal from '../components/Modal';
 
 const Attendance: React.FC = () => {
+  const navigate = useNavigate();
   const [sessions, setSessions] = useState<AttendanceSession[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,6 +34,9 @@ const Attendance: React.FC = () => {
   const [studentsInBatch, setStudentsInBatch] = useState<Student[]>([]);
   const [markLoading, setMarkLoading] = useState(false);
   const [attendanceData, setAttendanceData] = useState<{[studentId: string]: 'present' | 'absent' | 'late'}>({});
+  const [sessionsWithAttendance, setSessionsWithAttendance] = useState<Set<string>>(new Set());
+  const [hasExistingAttendance, setHasExistingAttendance] = useState(false);
+  const [isViewMode, setIsViewMode] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -40,13 +45,56 @@ const Attendance: React.FC = () => {
         api.get<ApiListResponse<AttendanceSession>>('/attendance/sessions?limit=50'),
         api.get<ApiListResponse<Batch>>('/batches?limit=100')
       ]);
-      setSessions(sessionsRes.items || []);
-      setBatches(batchesRes.items || []);
+      const loadedSessions = sessionsRes.items || [];
+      const loadedBatches = batchesRes.items || [];
+      setSessions(loadedSessions);
+      setBatches(loadedBatches);
+      
+      // Check which sessions have attendance marked
+      await checkSessionsForAttendance(loadedSessions, loadedBatches);
     } catch (error) {
       showToast('Failed to load attendance data', 'error');
     } finally {
       setLoading(false);
     }
+  };
+
+  const checkSessionsForAttendance = async (sessionsToCheck: AttendanceSession[], batchList: Batch[]) => {
+    const sessionsWithRecords = new Set<string>();
+    
+    // Check each session for existing attendance records
+    for (const session of sessionsToCheck) {
+      try {
+        // Try bulk endpoint first
+        try {
+          const response = await api.get<any>(`/attendance/sessions/${session.id}`);
+          if (response.ok && response.records && response.records.length > 0) {
+            sessionsWithRecords.add(session.id);
+            continue;
+          }
+        } catch (bulkError) {
+          // Bulk endpoint not available, try fallback
+        }
+        
+        // Fallback: Get batch and check first student
+        const batch = batchList.find(b => b.id === session.batchId);
+        if (batch && batch.studentIds && batch.studentIds.length > 0) {
+          const firstStudentId = batch.studentIds[0];
+          const response = await api.get<any>(`/attendance/student/${firstStudentId}`);
+          if (response.items && response.items.length > 0) {
+            const hasRecord = response.items.some((r: any) => r.sessionId === session.id);
+            if (hasRecord) {
+              sessionsWithRecords.add(session.id);
+            }
+          }
+        }
+      } catch (error) {
+        // Silently fail - session might not have attendance yet
+        console.log(`Could not check attendance for session ${session.id}`);
+      }
+    }
+    
+    setSessionsWithAttendance(sessionsWithRecords);
   };
 
   useEffect(() => {
@@ -154,11 +202,13 @@ const Attendance: React.FC = () => {
     }
   };
 
-  const openMarkModal = async (session: AttendanceSession) => {
+  const openMarkModal = async (session: AttendanceSession, viewOnly: boolean = false) => {
     setSelectedSession(session);
     setIsMarkModalOpen(true);
     setStudentsInBatch([]);
     setAttendanceData({});
+    setHasExistingAttendance(false);
+    setIsViewMode(viewOnly);
     
     // Load students for this batch
     try {
@@ -168,7 +218,104 @@ const Attendance: React.FC = () => {
         const filtered = studentsRes.items.filter(s => batch.studentIds.includes(s.id));
         setStudentsInBatch(filtered);
         
-        // Initialize attendance data with all students as 'present' by default
+        // If viewing or editing, load actual attendance records from backend
+        if (viewOnly || sessionsWithAttendance.has(session.id)) {
+          console.log('Loading attendance records for session:', session.id);
+          const attendanceMap: {[studentId: string]: 'present' | 'absent' | 'late'} = {};
+          let recordsFound = 0;
+          
+          // Try new efficient endpoint first
+          try {
+            const response = await api.get<any>(`/attendance/sessions/${session.id}`);
+            console.log('Attendance response (bulk):', response);
+            
+            if (response.ok && response.records && response.records.length > 0) {
+              response.records.forEach((record: any) => {
+                attendanceMap[record.studentId] = record.status;
+                recordsFound++;
+              });
+              
+              setAttendanceData(attendanceMap);
+              setHasExistingAttendance(true);
+              console.log(`Loaded ${recordsFound} attendance records (bulk endpoint)`);
+              return;
+            }
+          } catch (error: any) {
+            console.log('Bulk endpoint not available, falling back to individual queries:', error.message);
+          }
+          
+          // Fallback: Query each student individually
+          for (const student of filtered) {
+            try {
+              const response = await api.get<any>(`/attendance/student/${student.id}`);
+              console.log(`Attendance for ${student.name}:`, response);
+              
+              // Find ALL records matching this session
+              if (response.items && response.items.length > 0) {
+                const matchingRecords = response.items.filter((r: any) => r.sessionId === session.id);
+                
+                if (matchingRecords.length > 0) {
+                  // If multiple records exist, use the most recent one (by markedAt timestamp)
+                  const latestRecord = matchingRecords.reduce((latest: any, current: any) => {
+                    const latestSeconds = latest.markedAt?.seconds || latest.markedAt?._seconds || 0;
+                    const latestNanos = latest.markedAt?.nanoseconds || latest.markedAt?._nanoseconds || 0;
+                    const currentSeconds = current.markedAt?.seconds || current.markedAt?._seconds || 0;
+                    const currentNanos = current.markedAt?.nanoseconds || current.markedAt?._nanoseconds || 0;
+                    
+                    // Compare seconds first, then nanoseconds if seconds are equal
+                    if (currentSeconds > latestSeconds) return current;
+                    if (currentSeconds === latestSeconds && currentNanos > latestNanos) return current;
+                    return latest;
+                  });
+                  
+                  console.log(`✓ Found ${matchingRecords.length} attendance record(s) for ${student.name}:`, matchingRecords);
+                  console.log(`Using latest for ${student.name}:`, {
+                    studentId: latestRecord.studentId,
+                    status: latestRecord.status,
+                    sessionId: latestRecord.sessionId,
+                    markedAt: latestRecord.markedAt,
+                    id: latestRecord.id
+                  });
+                  
+                  if (matchingRecords.length > 1) {
+                    console.warn(`⚠️ Multiple (${matchingRecords.length}) attendance records found for ${student.name} in session ${session.id}. Backend should use upsert!`);
+                  }
+                  
+                  attendanceMap[student.id] = latestRecord.status;
+                  recordsFound++;
+                } else {
+                  console.log(`✗ No matching record for ${student.name} in session ${session.id}`);
+                }
+              }
+            } catch (error) {
+              console.error(`Failed to load attendance for student ${student.id}:`, error);
+            }
+          }
+          
+          console.log('Final attendance map:', attendanceMap);
+          
+          if (recordsFound > 0) {
+            setAttendanceData(attendanceMap);
+            setHasExistingAttendance(true);
+            console.log(`Loaded ${recordsFound} attendance records (fallback method)`);
+          } else {
+            if (viewOnly) {
+              showToast('No attendance records found for this session', 'error');
+              setIsMarkModalOpen(false);
+              return;
+            }
+            // Initialize with defaults for marking
+            const initialAttendance: {[key: string]: 'present' | 'absent' | 'late'} = {};
+            filtered.forEach(student => {
+              initialAttendance[student.id] = 'present';
+            });
+            setAttendanceData(initialAttendance);
+            setHasExistingAttendance(false);
+          }
+          return;
+        }
+        
+        // Initialize attendance data with all students as 'present' by default (for new marking)
         const initialAttendance: {[key: string]: 'present' | 'absent' | 'late'} = {};
         filtered.forEach(student => {
           initialAttendance[student.id] = 'present';
@@ -184,20 +331,37 @@ const Attendance: React.FC = () => {
     if (!selectedSession) return;
     setMarkLoading(true);
     try {
-      // Mark attendance for all students
-      await Promise.all(
-        Object.entries(attendanceData).map(([studentId, status]) =>
-          api.post('/attendance/mark', {
-            sessionId: selectedSession.id,
-            studentId,
-            status
-          })
-        )
-      );
-      showToast('Attendance marked successfully for all students');
+      console.log('Marking attendance for session:', selectedSession.id);
+      console.log('Attendance data:', attendanceData);
+      
+      // Convert attendance data to records array
+      const records = Object.entries(attendanceData).map(([studentId, status]) => ({
+        studentId,
+        status
+      }));
+      
+      console.log('Sending records:', records);
+      
+      // TEMPORARY: Bulk format - backend needs to be fixed to accept this
+      const response = await api.post('/attendance/mark', {
+        sessionId: selectedSession.id,
+        records
+      });
+      
+      console.log('API Response:', response);
+      console.log('Attendance marked successfully');
+      showToast(hasExistingAttendance ? 'Attendance updated successfully' : 'Attendance marked successfully for all students');
+      
+      // Mark this session as having attendance
+      if (selectedSession) {
+        setSessionsWithAttendance(prev => new Set(prev).add(selectedSession.id));
+      }
+      
       setIsMarkModalOpen(false);
       setAttendanceData({});
+      loadData(); // Reload sessions to update UI
     } catch (error: any) {
+      console.error('Error marking attendance:', error);
       showToast(error.message || 'Failed to mark attendance', 'error');
     } finally {
       setMarkLoading(false);
@@ -205,10 +369,19 @@ const Attendance: React.FC = () => {
   };
 
   const updateStudentAttendance = (studentId: string, status: 'present' | 'absent' | 'late') => {
-    setAttendanceData(prev => ({
-      ...prev,
-      [studentId]: status
-    }));
+    const student = studentsInBatch.find(s => s.id === studentId);
+    const studentName = student?.name || 'Student';
+    
+    console.log(`📝 Updating attendance: ${studentName} (${studentId}) → ${status.toUpperCase()}`);
+    
+    setAttendanceData(prev => {
+      const updated = {
+        ...prev,
+        [studentId]: status
+      };
+      console.log('✓ Updated attendance data:', updated);
+      return updated;
+    });
   };
 
   const markAllAs = (status: 'present' | 'absent' | 'late') => {
@@ -247,7 +420,7 @@ const Attendance: React.FC = () => {
           <table className="w-full text-left">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Date</th>
+                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Created</th>
                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Batch</th>
                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Subject</th>
                 <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Time</th>
@@ -258,9 +431,12 @@ const Attendance: React.FC = () => {
               {sessions.map(session => (
                 <tr key={session.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4">
-                    <div className="flex items-center gap-2 font-medium text-gray-900">
-                      <Calendar size={16} className="text-gray-400" />
-                      {new Date(session.date).toLocaleDateString()}
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-2 font-medium text-gray-900">
+                        <Calendar size={16} className="text-gray-400" />
+                        {new Date(session.date).toLocaleDateString()}
+                      </div>
+                      <span className="text-xs text-gray-500 ml-6">Session for all dates</span>
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -277,6 +453,14 @@ const Attendance: React.FC = () => {
                       {(user?.role === 'admin' || user?.role === 'teacher') && (
                         <>
                           <button
+                            onClick={() => navigate(`/attendance/${session.id}`)}
+                            className="flex items-center gap-1 px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition text-sm font-medium"
+                            title="Manage Daily Attendance"
+                          >
+                            <List size={14} />
+                            Manage
+                          </button>
+                          <button
                             onClick={() => handleEditSession(session)}
                             className="text-indigo-600 hover:text-indigo-800 transition"
                             title="Edit Session"
@@ -292,12 +476,6 @@ const Attendance: React.FC = () => {
                           </button>
                         </>
                       )}
-                      <button 
-                        onClick={() => openMarkModal(session)}
-                        className="text-sm text-blue-600 hover:text-blue-800 font-medium hover:underline"
-                      >
-                        Mark Attendance
-                      </button>
                     </div>
                   </td>
                 </tr>
@@ -394,7 +572,7 @@ const Attendance: React.FC = () => {
       </Modal>
 
       {/* Mark Attendance Modal */}
-      <Modal isOpen={isMarkModalOpen} onClose={() => setIsMarkModalOpen(false)} title={`Mark Attendance - ${selectedSession?.subject || ''}`}>
+      <Modal isOpen={isMarkModalOpen} onClose={() => setIsMarkModalOpen(false)} title={`${isViewMode ? 'View' : hasExistingAttendance ? 'Edit' : 'Mark'} Attendance - ${selectedSession?.subject || ''}`}>
         <div className="space-y-4">
           {/* Session Info */}
           <div className="bg-indigo-50 p-3 rounded-lg text-sm border border-indigo-200">
@@ -409,17 +587,19 @@ const Attendance: React.FC = () => {
           </div>
 
           {/* Quick Actions */}
-          <div className="flex gap-2 pb-3 border-b">
-            <button type="button" onClick={() => markAllAs('present')} className="flex-1 px-3 py-2 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition text-sm font-medium">
-              <CheckCircle className="inline mr-1 w-4 h-4" /> Mark All Present
-            </button>
-            <button type="button" onClick={() => markAllAs('absent')} className="flex-1 px-3 py-2 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition text-sm font-medium">
-              <XCircle className="inline mr-1 w-4 h-4" /> Mark All Absent
-            </button>
-            <button type="button" onClick={() => markAllAs('late')} className="flex-1 px-3 py-2 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-lg hover:bg-yellow-100 transition text-sm font-medium">
-              <AlertCircle className="inline mr-1 w-4 h-4" /> Mark All Late
-            </button>
-          </div>
+          {!isViewMode && (
+            <div className="flex gap-2 pb-3 border-b">
+              <button type="button" onClick={() => markAllAs('present')} className="flex-1 px-3 py-2 bg-green-50 text-green-700 border border-green-200 rounded-lg hover:bg-green-100 transition text-sm font-medium">
+                <CheckCircle className="inline mr-1 w-4 h-4" /> Mark All Present
+              </button>
+              <button type="button" onClick={() => markAllAs('absent')} className="flex-1 px-3 py-2 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition text-sm font-medium">
+                <XCircle className="inline mr-1 w-4 h-4" /> Mark All Absent
+              </button>
+              <button type="button" onClick={() => markAllAs('late')} className="flex-1 px-3 py-2 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-lg hover:bg-yellow-100 transition text-sm font-medium">
+                <AlertCircle className="inline mr-1 w-4 h-4" /> Mark All Late
+              </button>
+            </div>
+          )}
 
           {/* Students List */}
           <div>
@@ -438,39 +618,58 @@ const Attendance: React.FC = () => {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => updateStudentAttendance(student.id, 'present')}
-                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                      {isViewMode ? (
+                        // View mode - show status as badge
+                        <span className={`px-4 py-2 rounded-lg text-sm font-medium ${
                           attendanceData[student.id] === 'present'
-                            ? 'bg-green-600 text-white'
-                            : 'bg-white text-green-600 border border-green-300 hover:bg-green-50'
-                        }`}
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => updateStudentAttendance(student.id, 'absent')}
-                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                          attendanceData[student.id] === 'absent'
-                            ? 'bg-red-600 text-white'
-                            : 'bg-white text-red-600 border border-red-300 hover:bg-red-50'
-                        }`}
-                      >
-                        <XCircle className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => updateStudentAttendance(student.id, 'late')}
-                        className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                          attendanceData[student.id] === 'late'
-                            ? 'bg-yellow-600 text-white'
-                            : 'bg-white text-yellow-600 border border-yellow-300 hover:bg-yellow-50'
-                        }`}
-                      >
-                        <AlertCircle className="w-4 h-4" />
-                      </button>
+                            ? 'bg-green-100 text-green-800'
+                            : attendanceData[student.id] === 'absent'
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {attendanceData[student.id] === 'present' && <CheckCircle className="inline w-4 h-4 mr-1" />}
+                          {attendanceData[student.id] === 'absent' && <XCircle className="inline w-4 h-4 mr-1" />}
+                          {attendanceData[student.id] === 'late' && <AlertCircle className="inline w-4 h-4 mr-1" />}
+                          {attendanceData[student.id]?.toUpperCase()}
+                        </span>
+                      ) : (
+                        // Edit mode - show clickable buttons
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => updateStudentAttendance(student.id, 'present')}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                              attendanceData[student.id] === 'present'
+                                ? 'bg-green-600 text-white'
+                                : 'bg-white text-green-600 border border-green-300 hover:bg-green-50'
+                            }`}
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => updateStudentAttendance(student.id, 'absent')}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                              attendanceData[student.id] === 'absent'
+                                ? 'bg-red-600 text-white'
+                                : 'bg-white text-red-600 border border-red-300 hover:bg-red-50'
+                            }`}
+                          >
+                            <XCircle className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => updateStudentAttendance(student.id, 'late')}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                              attendanceData[student.id] === 'late'
+                                ? 'bg-yellow-600 text-white'
+                                : 'bg-white text-yellow-600 border border-yellow-300 hover:bg-yellow-50'
+                            }`}
+                          >
+                            <AlertCircle className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -482,15 +681,19 @@ const Attendance: React.FC = () => {
 
           {/* Actions */}
           <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
-            <button type="button" onClick={() => setIsMarkModalOpen(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition">Cancel</button>
-            <button 
-              type="button" 
-              onClick={handleBulkMarkAttendance} 
-              disabled={studentsInBatch.length === 0}
-              className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition font-medium"
-            >
-              Save Attendance for All
+            <button type="button" onClick={() => setIsMarkModalOpen(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition">
+              {isViewMode ? 'Close' : 'Cancel'}
             </button>
+            {!isViewMode && (
+              <button 
+                type="button" 
+                onClick={handleBulkMarkAttendance} 
+                disabled={studentsInBatch.length === 0}
+                className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition font-medium"
+              >
+                {hasExistingAttendance ? 'Update Attendance' : 'Save Attendance for All'}
+              </button>
+            )}
           </div>
         </div>
       </Modal>

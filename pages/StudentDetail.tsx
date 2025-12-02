@@ -130,14 +130,15 @@ const StudentDetail: React.FC = () => {
 
         // Fetch Homework assigned to this student
         try {
-          const homeworkResponse = await api.get<ApiListResponse<Homework>>(`/homework?assignedTo=${id}&limit=100`);
-          // Backend bug: assignedTo query param doesn't work, so filter on frontend
+          // Get all homework and filter client-side since backend doesn't support assignTo filter
+          const homeworkResponse = await api.get<ApiListResponse<Homework>>(`/homework?limit=1000`);
+          // Filter homework assigned to this specific student (check both userId and document id)
           const filteredHomework = (homeworkResponse.items || []).filter(hw => {
             const assignTo = (hw as any).assignTo || [];
-            return assignTo.includes(id);
+            return assignTo.includes(id) || assignTo.includes(foundStudent.userId);
           });
           console.log('All homework:', homeworkResponse.items?.length);
-          console.log('Filtered homework for student:', filteredHomework.length);
+          console.log('Filtered homework for student (id or userId):', filteredHomework.length);
           setHomework(filteredHomework);
         } catch (error) {
           // Endpoint not available yet - this is OK
@@ -186,6 +187,8 @@ const StudentDetail: React.FC = () => {
     if (!id || !student) return;
     setSubmitting(true);
     try {
+        // Use student's userId (Firebase Auth UID) instead of document id
+        const studentUserId = student.userId || id;
         await api.post('/homework', {
         title: homeworkForm.title,
         description: homeworkForm.description,
@@ -193,15 +196,19 @@ const StudentDetail: React.FC = () => {
         board: student.board,
         standard: student.standard,
         dueDate: homeworkForm.dueDate,
-        assignedTo: [id]
+        assignTo: [studentUserId]
         });
         showToast('Homework created successfully');
         setIsHomeworkModalOpen(false);
         setHomeworkForm({ title: '', description: '', subject: '', dueDate: '' });
         
-        // Refresh homework
-        const homeworkResponse = await api.get<ApiListResponse<Homework>>(`/homework?assignedTo=${id}&limit=100`);
-        setHomework(homeworkResponse.items || []);
+        // Refresh homework with filter (check both userId and document id)
+        const homeworkResponse = await api.get<ApiListResponse<Homework>>(`/homework?limit=1000`);
+        const filteredHomework = (homeworkResponse.items || []).filter(hw => {
+          const assignTo = (hw as any).assignTo || [];
+          return assignTo.includes(id) || assignTo.includes(student.userId);
+        });
+        setHomework(filteredHomework);
     } catch (error: any) {
         showToast(error.message || 'Failed to create homework', 'error');
     } finally {
@@ -228,11 +235,11 @@ const StudentDetail: React.FC = () => {
         setEditingHomework(null);
         setHomeworkForm({ title: '', description: '', subject: '', dueDate: '' });
         
-        // Refresh homework with filter
-        const homeworkResponse = await api.get<ApiListResponse<Homework>>(`/homework?assignedTo=${id}&limit=100`);
+        // Refresh homework with filter (check both userId and document id)
+        const homeworkResponse = await api.get<ApiListResponse<Homework>>(`/homework?limit=1000`);
         const filteredHomework = (homeworkResponse.items || []).filter(hw => {
           const hwAssignTo = (hw as any).assignTo || [];
-          return hwAssignTo.includes(id);
+          return hwAssignTo.includes(id) || hwAssignTo.includes(student.userId);
         });
         setHomework(filteredHomework);
         } catch (error: any) {

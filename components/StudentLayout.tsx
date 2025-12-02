@@ -3,8 +3,6 @@ import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
   LayoutDashboard, 
-  Users, 
-  GraduationCap, 
   BookOpen, 
   ClipboardList, 
   CalendarCheck, 
@@ -12,12 +10,11 @@ import {
   Menu,
   LogOut,
   X,
-  PenTool,
-  BarChart3,
   MessageSquare,
+  FileText,
+  User,
   ChevronLeft,
-  ChevronRight,
-  BookText
+  ChevronRight
 } from 'lucide-react';
 
 const SidebarLink = ({ to, icon: Icon, label, onClick, isCollapsed }: any) => (
@@ -27,7 +24,7 @@ const SidebarLink = ({ to, icon: Icon, label, onClick, isCollapsed }: any) => (
     className={({ isActive }) =>
       `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
         isActive
-          ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md'
+          ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-md'
           : 'text-gray-600 hover:bg-gray-100'
       } ${isCollapsed ? 'justify-center' : ''}`
     }
@@ -38,7 +35,7 @@ const SidebarLink = ({ to, icon: Icon, label, onClick, isCollapsed }: any) => (
   </NavLink>
 );
 
-const Layout: React.FC = () => {
+const StudentLayout: React.FC = () => {
   const { logout, user } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -47,6 +44,12 @@ const Layout: React.FC = () => {
   const toggleMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
   const closeMenu = () => setIsMobileMenuOpen(false);
   const toggleCollapse = () => setIsCollapsed(!isCollapsed);
+
+  // Get current page title
+  const getPageTitle = () => {
+    const path = location.pathname.split('/').pop() || 'dashboard';
+    return path.charAt(0).toUpperCase() + path.slice(1);
+  };
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
@@ -68,11 +71,12 @@ const Layout: React.FC = () => {
           w-64
         `}
       >
+        {/* Header */}
         <div className="relative border-b border-gray-100 bg-white">
            <div className={`flex items-center justify-center transition-all duration-300 ${isCollapsed ? 'p-3' : 'p-6'}`}>
               <img 
                 src="/logo.png" 
-                alt="Sneha EMS Logo" 
+                alt="Student Portal Logo" 
                 className={`object-contain transition-all duration-300 ${isCollapsed ? 'w-10 h-10' : 'w-16 h-16'}`} 
               />
            </div>
@@ -88,25 +92,23 @@ const Layout: React.FC = () => {
            </button>
         </div>
 
+        {/* Navigation */}
         <nav className="flex-1 overflow-y-auto p-4 space-y-1">
-          <SidebarLink to="/dashboard" icon={LayoutDashboard} label="Dashboard" onClick={closeMenu} isCollapsed={isCollapsed} />
-          <SidebarLink to="/students" icon={Users} label="Students" onClick={closeMenu} isCollapsed={isCollapsed} />
-          <SidebarLink to="/teachers" icon={GraduationCap} label="Teachers" onClick={closeMenu} isCollapsed={isCollapsed} />
-          <SidebarLink to="/batches" icon={BookOpen} label="Batches" onClick={closeMenu} isCollapsed={isCollapsed} />
-          <SidebarLink to="/homework" icon={PenTool} label="Homework" onClick={closeMenu} isCollapsed={isCollapsed} />
-          <SidebarLink to="/fees" icon={CreditCard} label="Fees" onClick={closeMenu} isCollapsed={isCollapsed} />
-          <SidebarLink to="/tests" icon={ClipboardList} label="Tests" onClick={closeMenu} isCollapsed={isCollapsed} />
-          <SidebarLink to="/attendance" icon={CalendarCheck} label="Attendance" onClick={closeMenu} isCollapsed={isCollapsed} />
-          <SidebarLink to="/messages" icon={MessageSquare} label="Messages" onClick={closeMenu} isCollapsed={isCollapsed} />
-          <SidebarLink to="/materials" icon={BookText} label="Syllabus" onClick={closeMenu} isCollapsed={isCollapsed} />
-          <SidebarLink to="/analytics" icon={BarChart3} label="Analytics" onClick={closeMenu} isCollapsed={isCollapsed} />
+          <SidebarLink to="/student/dashboard" icon={LayoutDashboard} label="Dashboard" onClick={closeMenu} isCollapsed={isCollapsed} />
+          <SidebarLink to="/student/homework" icon={BookOpen} label="My Homework" onClick={closeMenu} isCollapsed={isCollapsed} />
+          <SidebarLink to="/student/tests" icon={ClipboardList} label="Tests & Results" onClick={closeMenu} isCollapsed={isCollapsed} />
+          <SidebarLink to="/student/attendance" icon={CalendarCheck} label="Attendance" onClick={closeMenu} isCollapsed={isCollapsed} />
+          <SidebarLink to="/student/fees" icon={CreditCard} label="Fee Details" onClick={closeMenu} isCollapsed={isCollapsed} />
+          <SidebarLink to="/student/messages" icon={MessageSquare} label="Messages" onClick={closeMenu} isCollapsed={isCollapsed} />
+          <SidebarLink to="/student/profile" icon={User} label="My Profile" onClick={closeMenu} isCollapsed={isCollapsed} />
         </nav>
 
+        {/* User Info & Logout */}
         <div className="p-4 border-t border-gray-100">
           {!isCollapsed && (
             <div className="mb-4 px-4">
               <p className="text-sm font-medium text-gray-900">{user?.name}</p>
-              <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
+              <p className="text-xs text-green-600 capitalize font-medium">Student</p>
             </div>
           )}
           <button
@@ -122,15 +124,17 @@ const Layout: React.FC = () => {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
+        {/* Mobile Header */}
         <header className="md:hidden bg-white border-b border-gray-200 p-4 flex items-center justify-between">
-          <div className="font-semibold text-gray-800 capitalize">
-            {location.pathname.replace('/', '')}
+          <div className="font-semibold text-gray-800">
+            {getPageTitle()}
           </div>
           <button onClick={toggleMenu} className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg">
             <Menu size={24} />
           </button>
         </header>
 
+        {/* Page Content */}
         <div className="flex-1 overflow-y-auto p-4 md:p-8">
           <div className="max-w-7xl mx-auto animate-fade-in">
             <Outlet />
@@ -141,4 +145,4 @@ const Layout: React.FC = () => {
   );
 };
 
-export default Layout;
+export default StudentLayout;

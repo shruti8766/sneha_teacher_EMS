@@ -99,13 +99,70 @@ export interface ActivityLog {
   details?: any;
 }
 
+export interface AnalyticsOverview {
+  totalStudents: number;
+  activeStudents: number;
+  totalTeachers: number;
+  totalBatches: number;
+  totalTests: number;
+  totalHomework: number;
+  pendingFees: number;
+  collectedFees: number;
+  attendanceRate: number;
+}
+
+export interface StudentAnalytics {
+  id: string;
+  name: string;
+  attendanceRate: number;
+  testAverage: number;
+  totalTests: number;
+  homeworkCompleted: number;
+  totalHomework: number;
+  feesPaid: number;
+  feesPending: number;
+}
+
+export interface BatchAnalytics {
+  id: string;
+  name: string;
+  subject: string;
+  studentCount: number;
+  averageAttendance: number;
+  averageTestScore: number;
+  sessionsCompleted: number;
+}
+
+export interface SubjectAnalytics {
+  subject: string;
+  totalStudents: number;
+  totalBatches: number;
+  averageScore: number;
+  totalTests: number;
+}
+
+export interface AttendanceAnalytics {
+  date: string;
+  present: number;
+  absent: number;
+  late: number;
+  totalStudents: number;
+  attendanceRate: number;
+}
+
+export interface LogStats {
+  [key: string]: number;
+}
+
 export interface AttendanceSession {
   id: string;
   batchId: string;
+  batchIds?: string[];
   date: string;
   subject: string;
   startTime?: string;
   endTime?: string;
+  topic?: string;
   createdAt?: any;
 }
 
@@ -115,6 +172,16 @@ export interface AttendanceMark {
   studentId: string;
   status: 'present' | 'absent' | 'late';
   markedAt: any;
+}
+
+export interface DailyAttendance {
+  id: string;
+  sessionId: string;
+  date: string;
+  studentId: string;
+  status: 'present' | 'absent' | 'late';
+  markedAt: any;
+  updatedAt?: any;
 }
 
 export interface TestResult {
@@ -148,4 +215,24 @@ export interface FeePlan {
   frequency: string;
   startMonth?: string;
   isActive?: boolean;
+}
+
+export interface Message {
+  id: string;
+  title: string;
+  content: string;
+  type: 'notice' | 'announcement' | 'alert' | 'reminder';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  recipientType: 'all' | 'batch' | 'student' | 'standard' | 'board';
+  recipientIds?: string[];
+  batchId?: string;
+  studentId?: string;
+  board?: string;
+  standard?: number;
+  createdBy: string;
+  createdByName?: string;
+  createdAt: string | { _seconds: number; _nanoseconds: number };
+  expiresAt?: string;
+  isActive: boolean;
+  readBy?: string[];
 }

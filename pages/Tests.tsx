@@ -27,10 +27,10 @@ const Tests: React.FC = () => {
     maxMarks: '',
     durationMin: '',
     description: '',
-    assignmentType: 'standard' as 'standard' | 'batch' | 'student',
-    batchId: '',
-    studentId: ''
+    assignmentType: 'standard' as 'standard' | 'batch' | 'students',
+    batchId: ''
   });
+  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   const loadTests = async () => {
@@ -87,8 +87,9 @@ const Tests: React.FC = () => {
       // Add assignment-specific fields
       if (formData.assignmentType === 'batch' && formData.batchId) {
         payload.batchId = formData.batchId;
-      } else if (formData.assignmentType === 'student' && formData.studentId) {
-        payload.studentId = formData.studentId;
+      } else if (formData.assignmentType === 'students' && selectedStudents.length > 0) {
+        // Use assignTo array with student userIds (like homework)
+        payload.assignTo = selectedStudents;
       }
 
       if (editingTest) {
@@ -121,10 +122,10 @@ const Tests: React.FC = () => {
       maxMarks: (test.totalMarks || test.maxMarks || '').toString(),
       durationMin: (test.duration || test.durationMin || '').toString(),
       description: test.description || '',
-      assignmentType: (test as any).batchId ? 'batch' : (test as any).studentId ? 'student' : 'standard',
-      batchId: (test as any).batchId || '',
-      studentId: (test as any).studentId || ''
+      assignmentType: (test as any).batchId ? 'batch' : (test as any).assignTo ? 'students' : 'standard',
+      batchId: (test as any).batchId || ''
     });
+    setSelectedStudents((test as any).assignTo || []);
     setIsModalOpen(true);
   };
 
@@ -153,9 +154,9 @@ const Tests: React.FC = () => {
       durationMin: '',
       description: '',
       assignmentType: 'standard',
-      batchId: '',
-      studentId: ''
+      batchId: ''
     });
+    setSelectedStudents([]);
   };
 
   const handleModalClose = () => {
@@ -207,9 +208,9 @@ const Tests: React.FC = () => {
                       <Users size={12} /> Batch Assigned
                     </span>
                   )}
-                  {(test as any).studentId && (
+                  {(test as any).assignTo && (test as any).assignTo.length > 0 && (
                     <span className="inline-flex items-center gap-1 mt-1 text-xs bg-pink-100 text-pink-700 px-2 py-0.5 rounded-full">
-                      <UserIcon size={12} /> Student Specific
+                      <UserIcon size={12} /> {(test as any).assignTo.length} Student{(test as any).assignTo.length > 1 ? 's' : ''}
                     </span>
                   )}
                 </div>
@@ -346,12 +347,12 @@ const Tests: React.FC = () => {
                 <input
                   type="radio"
                   name="assignmentType"
-                  value="student"
-                  checked={formData.assignmentType === 'student'}
+                  value="students"
+                  checked={formData.assignmentType === 'students'}
                   onChange={e => setFormData({...formData, assignmentType: e.target.value as any, batchId: ''})}
                   className="text-purple-600 focus:ring-purple-500"
                 />
-                <span className="text-sm text-gray-700">Specific Student</span>
+                <span className="text-sm text-gray-700">Specific Students</span>
               </label>
             </div>
 
@@ -379,27 +380,36 @@ const Tests: React.FC = () => {
               </div>
             )}
 
-            {formData.assignmentType === 'student' && (
+            {formData.assignmentType === 'students' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Select Student *</label>
-                <select
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none bg-white text-gray-900"
-                  value={formData.studentId}
-                  onChange={e => setFormData({...formData, studentId: e.target.value})}
-                >
-                  <option value="">Choose a student</option>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Select Students *</label>
+                <div className="max-h-60 overflow-y-auto border border-gray-300 rounded-lg p-3 bg-gray-50">
                   {students
                     .filter(s => s.standard === parseInt(formData.standard) && s.board === formData.board)
                     .map(student => (
-                      <option key={student.id} value={student.id}>
-                        {student.name} - {student.email}
-                      </option>
+                      <label key={student.id} className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={selectedStudents.includes(student.userId)}
+                          onChange={() => {
+                            setSelectedStudents(prev =>
+                              prev.includes(student.userId)
+                                ? prev.filter(id => id !== student.userId)
+                                : [...prev, student.userId]
+                            );
+                          }}
+                          className="text-purple-600 focus:ring-purple-500 rounded"
+                        />
+                        <span className="text-sm text-gray-700">{student.name} - {student.email}</span>
+                      </label>
                     ))}
                   {students.filter(s => s.standard === parseInt(formData.standard) && s.board === formData.board).length === 0 && (
-                    <option disabled>No students available for selected board/standard</option>
+                    <p className="text-sm text-gray-500 text-center py-4">No students available for selected board/standard</p>
                   )}
-                </select>
+                </div>
+                {selectedStudents.length > 0 && (
+                  <p className="text-xs text-green-600 mt-2">{selectedStudents.length} student{selectedStudents.length > 1 ? 's' : ''} selected</p>
+                )}
               </div>
             )}
           </div>
