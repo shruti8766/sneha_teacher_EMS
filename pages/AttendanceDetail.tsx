@@ -4,6 +4,7 @@ import { api } from '../services/api';
 import { ApiListResponse, AttendanceSession, Batch, Student, DailyAttendance } from '../types';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
+import { useDarkMode } from '../context/DarkModeContext';
 import { Loader2, Calendar, ArrowLeft, CheckCircle, XCircle, Clock, Save } from 'lucide-react';
 
 const AttendanceDetail: React.FC = () => {
@@ -11,6 +12,7 @@ const AttendanceDetail: React.FC = () => {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const { user } = useAuth();
+  const { isDarkMode } = useDarkMode();
 
   const [session, setSession] = useState<AttendanceSession | null>(null);
   const [batch, setBatch] = useState<Batch | null>(null);
@@ -290,7 +292,7 @@ const AttendanceDetail: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className={`flex items-center justify-center min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
         <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
       </div>
     );
@@ -298,54 +300,54 @@ const AttendanceDetail: React.FC = () => {
 
   if (!session || !batch) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-800">Session or batch not found</p>
+      <div className={`max-w-4xl mx-auto p-6 min-h-screen ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
+        <div className={`border rounded-lg p-4 ${isDarkMode ? 'bg-red-900 border-red-700' : 'bg-red-50 border-red-200'}`}>
+          <p className={isDarkMode ? 'text-red-300' : 'text-red-800'}>Session or batch not found</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
+    <div className={`max-w-7xl mx-auto p-6 min-h-screen px-4 md:px-8 py-6 ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
       {/* Header */}
       <div className="mb-6">
         <button
           onClick={() => navigate('/attendance')}
-          className="flex items-center text-gray-600 hover:text-gray-900 mb-4"
+          className={`flex items-center mb-4 ${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
         >
           <ArrowLeft className="w-5 h-5 mr-2" />
           Back to Sessions
         </button>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">{batch.name}</h1>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
+        <div className={`rounded-lg shadow-sm border p-6 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+          <h1 className={`text-2xl font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{batch.name}</h1>
+          <div className={`grid grid-cols-1 md:grid-cols-3 gap-4 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
             <div>
-              <span className="font-medium">Subject:</span> {session.subject}
+              <span className={`font-medium ${isDarkMode ? 'text-gray-300' : ''}`}>Subject:</span> {session.subject}
             </div>
             <div>
-              <span className="font-medium">Board:</span> {batch.board}
+              <span className={`font-medium ${isDarkMode ? 'text-gray-300' : ''}`}>Board:</span> {batch.board}
             </div>
             <div>
-              <span className="font-medium">Standard:</span> {batch.standard}
+              <span className={`font-medium ${isDarkMode ? 'text-gray-300' : ''}`}>Standard:</span> {batch.standard}
             </div>
           </div>
           {session.topic && (
-            <div className="mt-3 text-sm text-gray-600">
-              <span className="font-medium">Topic:</span> {session.topic}
+            <div className={`mt-3 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              <span className={`font-medium ${isDarkMode ? 'text-gray-300' : ''}`}>Topic:</span> {session.topic}
             </div>
           )}
         </div>
       </div>
 
       {/* Date Selector */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+      <div className={`rounded-lg shadow-sm border p-6 mb-6 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <Calendar className="w-5 h-5 text-gray-500" />
+            <Calendar className={`w-5 h-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                 Select Date
               </label>
               <input
@@ -356,14 +358,14 @@ const AttendanceDetail: React.FC = () => {
                   setHasChanges(false);
                   setIsEditMode(false);
                 }}
-                className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className={`border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 bg-white text-gray-900'}`}
               />
             </div>
             
             {/* Past Date Indicator & Edit Button */}
             {isPastDate() && (
               <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                <span className={`text-sm px-3 py-1 rounded-full ${isDarkMode ? 'text-gray-400 bg-gray-700' : 'text-gray-500 bg-gray-100'}`}>
                   Past Date
                 </span>
                 {!isEditMode ? (
@@ -378,7 +380,7 @@ const AttendanceDetail: React.FC = () => {
                     onClick={() => {
                       setIsEditMode(false);
                       setHasChanges(false);
-                      loadAttendanceForDate(selectedDate); // Reload to discard changes
+                      loadAttendanceForDate(selectedDate);
                     }}
                     className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm font-medium"
                   >
@@ -390,7 +392,7 @@ const AttendanceDetail: React.FC = () => {
             
             {/* Today Indicator */}
             {selectedDate === new Date().toISOString().slice(0, 10) && (
-              <span className="text-sm text-green-600 bg-green-100 px-3 py-1 rounded-full font-medium">
+              <span className={`text-sm px-3 py-1 rounded-full font-medium ${isDarkMode ? 'text-green-300 bg-green-900' : 'text-green-600 bg-green-100'}`}>
                 Today - Auto-saves every 30s
               </span>
             )}
@@ -400,15 +402,15 @@ const AttendanceDetail: React.FC = () => {
           <div className="flex space-x-6">
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">{presentCount}</div>
-              <div className="text-sm text-gray-600">Present</div>
+              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Present</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-red-600">{absentCount}</div>
-              <div className="text-sm text-gray-600">Absent</div>
+              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Absent</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-yellow-600">{lateCount}</div>
-              <div className="text-sm text-gray-600">Late</div>
+              <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Late</div>
             </div>
           </div>
         </div>
@@ -438,29 +440,29 @@ const AttendanceDetail: React.FC = () => {
       )}
 
       {/* Students List */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="p-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">
+      <div className={`rounded-lg shadow-sm border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+        <div className={`p-4 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+          <h2 className={`text-lg font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
             Students ({students.length})
           </h2>
         </div>
 
         {students.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
+          <div className={`p-8 text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
             No students in this batch
           </div>
         ) : (
-          <div className="divide-y divide-gray-200">
+          <div className={`divide-y ${isDarkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
             {students.map(student => {
               const attendance = attendanceMap[student.id];
               const status = attendance?.status || 'present';
 
               return (
-                <div key={student.id} className="p-4 hover:bg-gray-50">
+                <div key={student.id} className={`p-4 ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <h3 className="font-medium text-gray-900">{student.name}</h3>
-                      <p className="text-sm text-gray-500">{student.email}</p>
+                      <h3 className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{student.name}</h3>
+                      <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{student.email}</p>
                     </div>
 
                     {/* Status Buttons */}
@@ -471,7 +473,7 @@ const AttendanceDetail: React.FC = () => {
                         className={`flex items-center px-4 py-2 rounded-lg border-2 transition-all ${
                           status === 'present'
                             ? 'border-green-500 bg-green-50 text-green-700'
-                            : 'border-gray-300 text-gray-600 hover:border-green-300'
+                            : isDarkMode ? 'border-gray-600 text-gray-300 hover:border-green-600' : 'border-gray-300 text-gray-600 hover:border-green-300'
                         } ${!canEdit() ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         <CheckCircle className="w-4 h-4 mr-1" />
@@ -484,7 +486,7 @@ const AttendanceDetail: React.FC = () => {
                         className={`flex items-center px-4 py-2 rounded-lg border-2 transition-all ${
                           status === 'late'
                             ? 'border-yellow-500 bg-yellow-50 text-yellow-700'
-                            : 'border-gray-300 text-gray-600 hover:border-yellow-300'
+                            : isDarkMode ? 'border-gray-600 text-gray-300 hover:border-yellow-600' : 'border-gray-300 text-gray-600 hover:border-yellow-300'
                         } ${!canEdit() ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         <Clock className="w-4 h-4 mr-1" />
@@ -497,7 +499,7 @@ const AttendanceDetail: React.FC = () => {
                         className={`flex items-center px-4 py-2 rounded-lg border-2 transition-all ${
                           status === 'absent'
                             ? 'border-red-500 bg-red-50 text-red-700'
-                            : 'border-gray-300 text-gray-600 hover:border-red-300'
+                            : isDarkMode ? 'border-gray-600 text-gray-300 hover:border-red-600' : 'border-gray-300 text-gray-600 hover:border-red-300'
                         } ${!canEdit() ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         <XCircle className="w-4 h-4 mr-1" />

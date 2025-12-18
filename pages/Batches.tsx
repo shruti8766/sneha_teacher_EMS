@@ -1,17 +1,19 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
-import { ApiListResponse, Batch, Student } from '../types';
+import { ApiListResponse, Batch, Student, Teacher } from '../types';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
-import { Loader2, Users, Plus, Trash2, Search, X } from 'lucide-react';
+import { useDarkMode } from '../context/DarkModeContext';
+import { Loader2, Users, Plus, Trash2, Search, X, UserCheck, BookOpen } from 'lucide-react';
 import Modal from '../components/Modal';
 import { BOARDS, STANDARDS } from '../constants';
 
 const Batches: React.FC = () => {
   const [batches, setBatches] = useState<Batch[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [loading, setLoading] = useState(true);
+  const { isDarkMode } = useDarkMode();
   const { showToast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -23,7 +25,8 @@ const Batches: React.FC = () => {
     standard: '',
     subject: '',
     description: '',
-    maxStudents: ''
+    maxStudents: '',
+    teacherId: ''
   });
   const [submitting, setSubmitting] = useState(false);
   
@@ -66,9 +69,19 @@ const Batches: React.FC = () => {
     }
   };
 
+  const loadTeachers = async () => {
+    try {
+      const response = await api.get<ApiListResponse<Teacher>>('/teachers?limit=1000');
+      setTeachers(response.items.filter(t => t.active !== false));
+    } catch (error) {
+      console.error('Failed to load teachers:', error);
+    }
+  };
+
   useEffect(() => {
     loadBatches();
     loadStudents();
+    loadTeachers();
     // eslint-disable-next-line
   }, []);
 
@@ -138,11 +151,13 @@ const Batches: React.FC = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
+      const teacherName = formData.teacherId ? teachers.find(t => t.id === formData.teacherId)?.name : undefined;
       const payload = {
         ...formData,
         standard: parseInt(formData.standard),
         maxStudents: formData.maxStudents ? parseInt(formData.maxStudents) : undefined,
-        studentIds: selectedStudents.map(s => s.id)
+        studentIds: selectedStudents.map(s => s.id),
+        teacherName: teacherName
       };
       console.log('Creating batch with payload:', payload);
       console.log('Selected students count:', selectedStudents.length);
@@ -151,7 +166,7 @@ const Batches: React.FC = () => {
       console.warn('⚠️ BACKEND BUG: studentIds field is not being persisted by the backend. Frontend sends studentIds array but backend returns empty array on GET /batches');
       showToast('Batch created successfully (Note: Student enrollment not working due to backend issue)', 'success');
       setIsModalOpen(false);
-      setFormData({ name: '', board: '', standard: '', subject: '', description: '', maxStudents: '' });
+      setFormData({ name: '', board: '', standard: '', subject: '', description: '', maxStudents: '', teacherId: '' });
       setSelectedStudents([]);
       setSearchQuery('');
       setFilterStandard('');
@@ -191,9 +206,12 @@ const Batches: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 min-h-screen px-4 md:px-8 py-6 ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-800">Batches</h1>
+        <h1 className={`text-3xl font-bold flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+          <BookOpen className="text-orange-600" size={36} />
+          Batches
+        </h1>
         {user?.role === 'admin' && (
           <button
             onClick={() => setIsModalOpen(true)}
@@ -207,17 +225,17 @@ const Batches: React.FC = () => {
       {loading ? (
         <div className="flex justify-center p-8"><Loader2 className="animate-spin text-blue-600" /></div>
       ) : batches.length === 0 ? (
-         <div className="text-center text-gray-500 p-8 bg-white rounded-xl border border-gray-100">No batches found.</div>
+         <div className={`text-center p-8 rounded-xl border ${isDarkMode ? 'text-gray-400 bg-gray-800 border-gray-700' : 'text-gray-500 bg-white border-gray-100'}`}>No batches found.</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {batches.map(batch => (
             <div
               key={batch.id}
               onClick={() => navigate(`/batches/${batch.id}`)}
-              className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-orange-200 transition cursor-pointer"
+              className={`p-6 rounded-xl shadow-sm border transition cursor-pointer ${isDarkMode ? 'bg-gray-800 border-gray-700 hover:shadow-md hover:border-orange-600' : 'bg-white border-gray-100 hover:shadow-md hover:border-orange-200'}`}
             >
               <div className="flex items-start justify-between mb-3">
-                <h3 className="text-lg font-bold text-gray-800">{batch.name}</h3>
+                <h3 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{batch.name}</h3>
                 {user?.role === 'admin' && (
                   <button
                     onClick={(e) => handleDeleteBatch(batch.id, batch.name, e)}
@@ -228,9 +246,16 @@ const Batches: React.FC = () => {
                   </button>
                 )}
               </div>
-              <div className="text-sm text-gray-500 mb-4">{batch.subject} • {batch.board} • Std {batch.standard}</div>
+              <div className={`text-sm mb-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{batch.subject} • {batch.board} • Std {batch.standard}</div>
               
-              <div className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 p-2 rounded-lg">
+              {batch.teacherName && (
+                <div className={`flex items-center gap-2 text-sm p-2 rounded-lg mb-2 ${isDarkMode ? 'bg-blue-900 border border-blue-700' : 'bg-blue-50 border border-blue-100'}`}>
+                  <UserCheck size={16} className={isDarkMode ? 'text-blue-400' : 'text-blue-600'} />
+                  <span className={`font-medium ${isDarkMode ? 'text-blue-300' : 'text-blue-700'}`}>{batch.teacherName}</span>
+                </div>
+              )}
+              
+              <div className={`flex items-center gap-2 text-sm p-2 rounded-lg ${isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>
                 <Users size={16} />
                 <span>{batch.studentIds?.length || 0} Students enrolled</span>
               </div>
@@ -242,21 +267,21 @@ const Batches: React.FC = () => {
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Create New Batch">
         <form onSubmit={handleCreate} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Batch Name *</label>
-            <input required type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900" placeholder="e.g., Class 10-A Maths" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+            <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Batch Name *</label>
+            <input required type="text" className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} placeholder="e.g., Class 10-A Maths" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
           </div>
           
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Board *</label>
-              <select required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900" value={formData.board} onChange={e => setFormData({...formData, board: e.target.value})}>
+              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Board *</label>
+              <select required className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} value={formData.board} onChange={e => setFormData({...formData, board: e.target.value})}>
                 <option value="">Select</option>
                 {BOARDS.map(b => <option key={b} value={b}>{b}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Standard *</label>
-              <select required className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900" value={formData.standard} onChange={e => setFormData({...formData, standard: e.target.value})}>
+              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Standard *</label>
+              <select required className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} value={formData.standard} onChange={e => setFormData({...formData, standard: e.target.value})}>
                 <option value="">Select</option>
                 {STANDARDS.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
@@ -265,38 +290,55 @@ const Batches: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Subject *</label>
-              <input required type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900" value={formData.subject} onChange={e => setFormData({...formData, subject: e.target.value})} />
+              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Subject *</label>
+              <input required type="text" className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} value={formData.subject} onChange={e => setFormData({...formData, subject: e.target.value})} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Max Students</label>
-              <input type="number" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900" value={formData.maxStudents} onChange={e => setFormData({...formData, maxStudents: e.target.value})} />
+              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Max Students</label>
+              <input type="number" className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} value={formData.maxStudents} onChange={e => setFormData({...formData, maxStudents: e.target.value})} />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <textarea className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900" rows={3} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
+            <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Assign Teacher</label>
+            <select 
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
+              value={formData.teacherId}
+              onChange={e => setFormData({...formData, teacherId: e.target.value})}
+            >
+              <option value="">No teacher assigned</option>
+              {teachers.map(teacher => (
+                <option key={teacher.id} value={teacher.id}>
+                  {teacher.name} {teacher.subjects ? `(${teacher.subjects.join(', ')})` : ''}
+                </option>
+              ))}
+            </select>
+            <p className={`text-xs mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Optional: Assign a teacher to this batch</p>
+          </div>
+
+          <div>
+            <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Description</label>
+            <textarea className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} rows={3} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
           </div>
 
           {/* Student Selection Section */}
-          <div className="border-t pt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-3">Add Students to Batch</label>
+          <div className={`border-t pt-4 ${isDarkMode ? 'border-gray-700' : ''}`}>
+            <label className={`block text-sm font-medium mb-3 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Add Students to Batch</label>
             
             {/* Search and Filter */}
             <div className="grid grid-cols-2 gap-3 mb-3">
               <div className="relative">
-                <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <Search size={18} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`} />
                 <input
                   type="text"
                   placeholder="Search by name, email or ID..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900 text-sm"
+                  className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                 />
               </div>
               <select
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900 text-sm"
+                className={`px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
                 value={filterStandard}
                 onChange={e => setFilterStandard(e.target.value)}
               >
@@ -316,7 +358,7 @@ const Batches: React.FC = () => {
                 {selectedStudents.map(student => (
                   <div
                     key={student.id}
-                    className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-orange-200 shadow-sm"
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full border shadow-sm ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-orange-200'}`}
                   >
                     <span className="text-sm font-medium text-gray-800">{student.name}</span>
                     <span className="text-xs text-gray-500">Std {student.standard}</span>

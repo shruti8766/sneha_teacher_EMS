@@ -3,6 +3,7 @@ import { api } from '../services/api';
 import { ApiListResponse, Message, Batch, Student } from '../types';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
+import { useDarkMode } from '../context/DarkModeContext';
 import {
   Loader2,
   Plus,
@@ -18,7 +19,8 @@ import {
   Users,
   Eye,
   Trash2,
-  Edit2
+  Edit2,
+  MessageSquare
 } from 'lucide-react';
 import Modal from '../components/Modal';
 import { BOARDS, STANDARDS } from '../constants';
@@ -35,6 +37,7 @@ const Messages: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const { showToast } = useToast();
   const { user } = useAuth();
+  const { isDarkMode } = useDarkMode();
 
   const [messageForm, setMessageForm] = useState({
     title: '',
@@ -252,12 +255,15 @@ const Messages: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 min-h-screen px-4 md:px-8 py-6 ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800">Messages & Notices</h1>
-          <p className="text-gray-600 mt-1">Send announcements and notices to students</p>
+          <h1 className={`text-3xl font-bold flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+            <MessageSquare className="text-pink-600" size={36} />
+            Messages & Notices
+          </h1>
+          <p className={`mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Send announcements and notices to students</p>
         </div>
         {(user?.role === 'admin' || user?.role === 'teacher') && (
           <button
@@ -274,7 +280,7 @@ const Messages: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+      <div className={`rounded-xl shadow-sm border p-4 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
         <div className="flex flex-wrap gap-4 items-center">
           <div className="flex-1 min-w-[200px]">
             <div className="relative">
@@ -284,7 +290,7 @@ const Messages: React.FC = () => {
                 placeholder="Search messages..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                className={`w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'border-gray-300 bg-white text-gray-900'}`}
               />
             </div>
           </div>
@@ -294,7 +300,7 @@ const Messages: React.FC = () => {
               className={`px-4 py-2 rounded-lg font-medium transition ${
                 filterType === 'all'
                   ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  : isDarkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
               All
@@ -304,7 +310,7 @@ const Messages: React.FC = () => {
               className={`px-4 py-2 rounded-lg font-medium transition ${
                 filterType === 'notice'
                   ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  : isDarkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
               Notices
@@ -314,7 +320,7 @@ const Messages: React.FC = () => {
               className={`px-4 py-2 rounded-lg font-medium transition ${
                 filterType === 'announcement'
                   ? 'bg-green-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  : isDarkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
               Announcements
@@ -324,7 +330,7 @@ const Messages: React.FC = () => {
               className={`px-4 py-2 rounded-lg font-medium transition ${
                 filterType === 'alert'
                   ? 'bg-red-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  : isDarkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
               Alerts
@@ -334,7 +340,7 @@ const Messages: React.FC = () => {
               className={`px-4 py-2 rounded-lg font-medium transition ${
                 filterType === 'reminder'
                   ? 'bg-orange-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  : isDarkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
               Reminders
@@ -345,10 +351,10 @@ const Messages: React.FC = () => {
 
       {/* Messages List */}
       {filteredMessages.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
-          <Mail className="mx-auto text-gray-400 mb-4" size={64} />
-          <p className="text-gray-500 text-lg">No messages found</p>
-          <p className="text-gray-400 text-sm mt-2">
+        <div className={`rounded-xl shadow-sm border p-12 text-center ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
+          <Mail className={`mx-auto mb-4 ${isDarkMode ? 'text-gray-600' : 'text-gray-400'}`} size={64} />
+          <p className={`text-lg ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>No messages found</p>
+          <p className={`text-sm mt-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
             {searchQuery || filterType !== 'all' ? 'Try adjusting your filters' : 'Send your first message to get started'}
           </p>
         </div>
@@ -357,19 +363,19 @@ const Messages: React.FC = () => {
           {filteredMessages.map(message => (
             <div
               key={message.id}
-              className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition"
+              className={`rounded-xl shadow-sm border p-6 hover:shadow-md transition ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     {getTypeIcon(message.type)}
-                    <h3 className="text-lg font-bold text-gray-800">{message.title}</h3>
+                    <h3 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{message.title}</h3>
                     <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getPriorityColor(message.priority)}`}>
                       {message.priority.toUpperCase()}
                     </span>
                   </div>
-                  <p className="text-gray-600 mb-3">{message.content}</p>
-                  <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+                  <p className={`mb-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{message.content}</p>
+                  <div className={`flex flex-wrap items-center gap-4 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                     <div className="flex items-center gap-1">
                       <Users size={14} />
                       <span>{getRecipientDisplay(message)}</span>
@@ -382,7 +388,7 @@ const Messages: React.FC = () => {
                       <span className="text-xs">By: {message.createdByName}</span>
                     )}
                     {message.expiresAt && (
-                      <span className="text-xs text-orange-600">Expires: {new Date(message.expiresAt).toLocaleDateString()}</span>
+                      <span className={`text-xs ${isDarkMode ? 'text-orange-400' : 'text-orange-600'}`}>Expires: {new Date(message.expiresAt).toLocaleDateString()}</span>
                     )}
                   </div>
                 </div>
@@ -390,14 +396,14 @@ const Messages: React.FC = () => {
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleEditMessage(message)}
-                      className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                      className={`p-2 text-indigo-600 rounded-lg transition ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-indigo-50'}`}
                       title="Edit Message"
                     >
                       <Edit2 size={18} />
                     </button>
                     <button
                       onClick={() => handleDeleteMessage(message.id)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                      className={`p-2 text-red-600 rounded-lg transition ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-red-50'}`}
                       title="Delete Message"
                     >
                       <Trash2 size={18} />
@@ -422,36 +428,36 @@ const Messages: React.FC = () => {
       >
         <form onSubmit={handleCreateMessage} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+            <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Title *</label>
             <input
               required
               type="text"
               value={messageForm.title}
               onChange={e => setMessageForm({ ...messageForm, title: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 bg-white text-gray-900'}`}
               placeholder="Message title"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Content *</label>
+            <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Content *</label>
             <textarea
               required
               value={messageForm.content}
               onChange={e => setMessageForm({ ...messageForm, content: e.target.value })}
               rows={4}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-none"
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 bg-white text-gray-900'}`}
               placeholder="Message content"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
+              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Type *</label>
               <select
                 value={messageForm.type}
                 onChange={e => setMessageForm({ ...messageForm, type: e.target.value as any })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 bg-white text-gray-900'}`}
               >
                 <option value="notice">Notice</option>
                 <option value="announcement">Announcement</option>
@@ -461,11 +467,11 @@ const Messages: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Priority *</label>
+              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Priority *</label>
               <select
                 value={messageForm.priority}
                 onChange={e => setMessageForm({ ...messageForm, priority: e.target.value as any })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 bg-white text-gray-900'}`}
               >
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
@@ -476,11 +482,11 @@ const Messages: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Send To *</label>
+            <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Send To *</label>
             <select
               value={messageForm.recipientType}
               onChange={e => setMessageForm({ ...messageForm, recipientType: e.target.value as any, batchId: '', board: '', standard: 0 })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 bg-white text-gray-900'}`}
             >
               <option value="all">All Students</option>
               <option value="batch">Specific Batch</option>
@@ -492,12 +498,12 @@ const Messages: React.FC = () => {
 
           {messageForm.recipientType === 'batch' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Select Batch *</label>
+              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Select Batch *</label>
               <select
                 required
                 value={messageForm.batchId}
                 onChange={e => setMessageForm({ ...messageForm, batchId: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 bg-white text-gray-900'}`}
               >
                 <option value="">Choose a batch</option>
                 {batches.map(batch => (
@@ -511,10 +517,10 @@ const Messages: React.FC = () => {
 
           {messageForm.recipientType === 'students' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Select Students *</label>
-              <div className="max-h-60 overflow-y-auto border border-gray-300 rounded-lg p-3 bg-gray-50">
+              <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Select Students *</label>
+              <div className={`max-h-60 overflow-y-auto border rounded-lg p-3 ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-300'}`}>
                 {students.map(student => (
-                  <label key={student.id} className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded cursor-pointer">
+                  <label key={student.id} className={`flex items-center gap-2 p-2 rounded cursor-pointer ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-100'}`}>
                     <input
                       type="checkbox"
                       checked={selectedStudents.includes(student.userId)}
@@ -527,27 +533,27 @@ const Messages: React.FC = () => {
                       }}
                       className="text-indigo-600 focus:ring-indigo-500 rounded"
                     />
-                    <span className="text-sm text-gray-700">{student.name} - {student.board} Std {student.standard}</span>
+                    <span className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{student.name} - {student.board} Std {student.standard}</span>
                   </label>
                 ))}
                 {students.length === 0 && (
-                  <p className="text-sm text-gray-500 text-center py-4">No students available</p>
+                  <p className={`text-sm text-center py-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>No students available</p>
                 )}
               </div>
               {selectedStudents.length > 0 && (
-                <p className="text-xs text-green-600 mt-2">{selectedStudents.length} student{selectedStudents.length > 1 ? 's' : ''} selected</p>
+                <p className={`text-xs mt-2 ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>{selectedStudents.length} student{selectedStudents.length > 1 ? 's' : ''} selected</p>
               )}
             </div>
           )}
 
           {messageForm.recipientType === 'board' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Select Board *</label>
+              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Select Board *</label>
               <select
                 required
                 value={messageForm.board}
                 onChange={e => setMessageForm({ ...messageForm, board: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 bg-white text-gray-900'}`}
               >
                 <option value="">Choose a board</option>
                 {BOARDS.map(board => (
@@ -559,12 +565,12 @@ const Messages: React.FC = () => {
 
           {messageForm.recipientType === 'standard' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Select Standard *</label>
+              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Select Standard *</label>
               <select
                 required
                 value={messageForm.standard}
                 onChange={e => setMessageForm({ ...messageForm, standard: parseInt(e.target.value) })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 bg-white text-gray-900'}`}
               >
                 <option value={0}>Choose a standard</option>
                 {STANDARDS.map(std => (
@@ -575,16 +581,16 @@ const Messages: React.FC = () => {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Expires At (Optional)</label>
+            <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Expires At (Optional)</label>
             <input
               type="datetime-local"
               value={messageForm.expiresAt}
               onChange={e => setMessageForm({ ...messageForm, expiresAt: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 bg-white text-gray-900'}`}
             />
           </div>
 
-          <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+          <div className={`flex justify-end gap-3 mt-6 pt-4 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
             <button
               type="button"
               onClick={() => {
@@ -592,7 +598,7 @@ const Messages: React.FC = () => {
                 setEditingMessage(null);
                 resetForm();
               }}
-              className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition"
+              className={`px-4 py-2 rounded-lg transition ${isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-100'}`}
             >
               Cancel
             </button>

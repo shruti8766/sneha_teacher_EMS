@@ -5,8 +5,10 @@ interface AuthContextType {
   user: User | null;
   sessionId: string | null;
   isAuthenticated: boolean;
+  isLoading: boolean;
   login: (data: LoginResponse) => void;
   logout: () => void;
+  updateUser: (userData: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -14,15 +16,23 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
     const storedSession = localStorage.getItem('sessionId');
 
     if (storedUser && storedSession) {
-      setUser(JSON.parse(storedUser));
-      setSessionId(storedSession);
+      try {
+        setUser(JSON.parse(storedUser));
+        setSessionId(storedSession);
+      } catch (error) {
+        console.error('Failed to parse stored user:', error);
+        localStorage.removeItem('user');
+        localStorage.removeItem('sessionId');
+      }
     }
+    setIsLoading(false);
   }, []);
 
   const login = (data: LoginResponse) => {
@@ -39,13 +49,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('sessionId');
   };
 
+  const updateUser = (userData: Partial<User>) => {
+    if (user) {
+      const updatedUser = { ...user, ...userData };
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+    }
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, 
       sessionId, 
-      isAuthenticated: !!sessionId, 
+      isAuthenticated: !!sessionId,
+      isLoading,
       login, 
-      logout 
+      logout,
+      updateUser
     }}>
       {children}
     </AuthContext.Provider>

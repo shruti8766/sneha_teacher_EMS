@@ -112,7 +112,17 @@ export const api = {
     return data as T;
   },
 
-  get: <T>(path: string, auth = true) => api.request<T>(path, { method: 'GET', auth }),
+  get: <T>(path: string, params?: Record<string, any>, auth = true) => {
+    // Build query string from params
+    let finalPath = path;
+    if (params && Object.keys(params).length > 0) {
+      const queryString = new URLSearchParams(
+        Object.entries(params).map(([key, value]) => [key, String(value)])
+      ).toString();
+      finalPath = `${path}?${queryString}`;
+    }
+    return api.request<T>(finalPath, { method: 'GET', auth });
+  },
   
   post: <T>(path: string, body: any, auth = true) => 
     api.request<T>(path, { method: 'POST', body: JSON.stringify(body), auth }),

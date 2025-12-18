@@ -11,6 +11,7 @@ import {
   LogStats
 } from '../types';
 import { useToast } from '../context/ToastContext';
+import { useDarkMode } from '../context/DarkModeContext';
 import { 
   Loader2, 
   Users, 
@@ -71,6 +72,7 @@ const Analytics: React.FC = () => {
   const [recentLogs, setRecentLogs] = useState<ActivityLog[]>([]);
   const [logStats, setLogStats] = useState<LogStats>({});
   const { showToast } = useToast();
+  const { isDarkMode } = useDarkMode();
 
   useEffect(() => {
     loadAnalytics();
@@ -238,15 +240,15 @@ const Analytics: React.FC = () => {
   const recentActivity = getRecentActivity();
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 min-h-screen px-4 md:px-8 py-6 ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
+          <h1 className={`text-3xl font-bold flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
             <BarChart3 className="text-indigo-600" size={36} />
             Analytics & Insights
           </h1>
-          <p className="text-gray-600 mt-1">Data-driven insights and performance metrics</p>
+          <p className={`mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Data-driven insights and performance metrics</p>
         </div>
         <button
           onClick={loadAnalytics}
@@ -258,38 +260,38 @@ const Analytics: React.FC = () => {
       </div>
 
       {/* Key Metrics Summary Bar */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <div className={`rounded-xl shadow-sm border p-6 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           <div className="text-center">
             <div className="text-3xl font-bold text-blue-600">{overviewStats.totalStudents}</div>
-            <div className="text-sm text-gray-600 mt-1">Total Students</div>
-            <div className="text-xs text-green-600 mt-1">↑ {overviewStats.activeStudents} active</div>
+            <div className={`text-sm mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total Students</div>
+            <div className={`text-xs mt-1 ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>↑ {overviewStats.activeStudents} active</div>
           </div>
-          <div className="text-center border-l border-gray-200">
+          <div className={`text-center border-l ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
             <div className="text-3xl font-bold text-purple-600">{overviewStats.totalTeachers}</div>
-            <div className="text-sm text-gray-600 mt-1">Total Teachers</div>
-            <div className="text-xs text-gray-500 mt-1">Faculty members</div>
+            <div className={`text-sm mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total Teachers</div>
+            <div className={`text-xs mt-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>Faculty members</div>
           </div>
-          <div className="text-center border-l border-gray-200">
+          <div className={`text-center border-l ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
             <div className="text-3xl font-bold text-green-600">{overviewStats.totalBatches}</div>
-            <div className="text-sm text-gray-600 mt-1">Active Batches</div>
-            <div className="text-xs text-gray-500 mt-1">Running classes</div>
+            <div className={`text-sm mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Active Batches</div>
+            <div className={`text-xs mt-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>Running classes</div>
           </div>
-          <div className="text-center border-l border-gray-200">
+          <div className={`text-center border-l ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
             <div className="text-3xl font-bold text-orange-600">{overviewStats.totalTests}</div>
-            <div className="text-sm text-gray-600 mt-1">Total Tests</div>
-            <div className="text-xs text-gray-500 mt-1">Assessments conducted</div>
+            <div className={`text-sm mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total Tests</div>
+            <div className={`text-xs mt-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>Assessments conducted</div>
           </div>
         </div>
       </div>
 
       {/* Performance Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <div className={`rounded-xl p-6 shadow-sm border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Target className="text-indigo-600" size={20} />
-              <span className="font-semibold text-gray-800">Engagement Rate</span>
+              <span className={`font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-800'}`}>Engagement Rate</span>
             </div>
             <span className="text-2xl font-bold text-indigo-600">
               {overviewStats.totalStudents > 0 
@@ -297,20 +299,20 @@ const Analytics: React.FC = () => {
                 : 0}%
             </span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-3">
+          <div className={`w-full rounded-full h-3 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
             <div 
               className="bg-indigo-600 h-3 rounded-full transition-all"
               style={{ width: `${overviewStats.totalStudents > 0 ? (overviewStats.activeStudents / overviewStats.totalStudents) * 100 : 0}%` }}
             ></div>
           </div>
-          <div className="text-xs text-gray-500 mt-2">Active students vs total enrolled</div>
+          <div className={`text-xs mt-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>Active students vs total enrolled</div>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <div className={`rounded-xl p-6 shadow-sm border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Users className="text-green-600" size={20} />
-              <span className="font-semibold text-gray-800">Avg Batch Size</span>
+              <span className={`font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-800'}`}>Avg Batch Size</span>
             </div>
             <span className="text-2xl font-bold text-green-600">
               {overviewStats.totalBatches > 0
@@ -318,33 +320,33 @@ const Analytics: React.FC = () => {
                 : 0}
             </span>
           </div>
-          <div className="text-sm text-gray-600">Students per class</div>
-          <div className="text-xs text-gray-500 mt-2">Optimal range: 15-25 students</div>
+          <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Students per class</div>
+          <div className={`text-xs mt-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>Optimal range: 15-25 students</div>
         </div>
 
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <div className={`rounded-xl p-6 shadow-sm border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Calendar className="text-orange-600" size={20} />
-              <span className="font-semibold text-gray-800">Attendance Sessions</span>
+              <span className={`font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-800'}`}>Attendance Sessions</span>
             </div>
             <span className="text-2xl font-bold text-orange-600">{overviewStats.totalSessions}</span>
           </div>
-          <div className="text-sm text-gray-600">Total sessions tracked</div>
-          <div className="text-xs text-gray-500 mt-2">Regular attendance monitoring</div>
+          <div className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total sessions tracked</div>
+          <div className={`text-xs mt-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>Regular attendance monitoring</div>
         </div>
       </div>
 
       {/* Subject Performance & Board Distribution */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Subject Performance */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-          <div className="p-6 border-b border-gray-100">
+        <div className={`rounded-xl shadow-sm border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
+          <div className={`p-6 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-100'}`}>
             <div className="flex items-center gap-2">
               <BarChart3 className="text-indigo-600" size={24} />
-              <h2 className="text-xl font-bold text-gray-800">Subject Performance</h2>
+              <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Subject Performance</h2>
             </div>
-            <p className="text-sm text-gray-600 mt-1">Student enrollment by subject</p>
+            <p className={`text-sm mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Student enrollment by subject</p>
           </div>
           <div className="p-6">
             {subjectPerformance.length > 0 ? (
@@ -374,7 +376,7 @@ const Analytics: React.FC = () => {
                           >
                             {/* Tooltip */}
                             <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block">
-                              <div className="bg-gray-900 text-white text-xs rounded-lg py-2 px-3 whitespace-nowrap shadow-lg">
+                              <div className={`text-xs rounded-lg py-2 px-3 whitespace-nowrap shadow-lg ${isDarkMode ? 'bg-gray-700 text-gray-100' : 'bg-gray-900 text-white'}`}>
                                 <p className="font-bold">{subject.subject}</p>
                                 <p className="mt-1">{subject.studentCount} students</p>
                                 <p>{subject.batchCount} batches</p>
@@ -390,7 +392,7 @@ const Analytics: React.FC = () => {
                           </div>
                         </div>
                         <div className="text-center">
-                          <p className="text-xs font-medium text-gray-700 truncate w-full" title={subject.subject}>
+                          <p className={`text-xs font-medium truncate w-full ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`} title={subject.subject}>
                             {subject.subject.length > 8 ? subject.subject.substring(0, 8) + '...' : subject.subject}
                           </p>
                         </div>
@@ -400,7 +402,7 @@ const Analytics: React.FC = () => {
                 </div>
 
                 {/* Legend/Details */}
-                <div className="border-t pt-4">
+                <div className={`border-t pt-4 ${isDarkMode ? 'border-gray-700' : ''}`}>
                   <div className="grid grid-cols-1 gap-2">
                     {subjectPerformance.map((subject, idx) => {
                       const colors = [
@@ -415,13 +417,13 @@ const Analytics: React.FC = () => {
                       ];
                       
                       return (
-                        <div key={idx} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg transition">
+                        <div key={idx} className={`flex items-center justify-between p-2 rounded-lg transition ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
                           <div className="flex items-center gap-2">
                             <div className={`w-3 h-3 rounded ${colors[idx % colors.length]}`}></div>
-                            <span className="text-sm font-medium text-gray-700">{subject.subject}</span>
+                            <span className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{subject.subject}</span>
                           </div>
-                          <div className="flex items-center gap-3 text-xs text-gray-600">
-                            <span className="font-semibold text-gray-900">{subject.studentCount} students</span>
+                          <div className={`flex items-center gap-3 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                            <span className={`font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>{subject.studentCount} students</span>
                             <span>{subject.batchCount} batches</span>
                             <span>{subject.testCount} tests</span>
                           </div>
@@ -432,34 +434,34 @@ const Analytics: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <p className="text-gray-500 text-center py-8">No subject data available</p>
+              <p className={`text-center py-8 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>No subject data available</p>
             )}
           </div>
         </div>
 
         {/* Board Distribution */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-          <div className="p-6 border-b border-gray-100">
+        <div className={`rounded-xl shadow-sm border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
+          <div className={`p-6 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-100'}`}>
             <div className="flex items-center gap-2">
               <PieChart className="text-green-600" size={24} />
-              <h2 className="text-xl font-bold text-gray-800">Board Distribution</h2>
+              <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Board Distribution</h2>
             </div>
-            <p className="text-sm text-gray-600 mt-1">Students across different boards</p>
+            <p className={`text-sm mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Students across different boards</p>
           </div>
           <div className="p-6">
             {boardDistribution.length > 0 ? (
               <div className="space-y-4">
                 {boardDistribution.map((board, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div key={idx} className={`flex items-center justify-between p-4 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
                     <div className="flex items-center gap-3">
                       <div className="w-3 h-3 rounded-full" style={{
                         backgroundColor: ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'][idx % 5]
                       }}></div>
-                      <span className="font-medium text-gray-800">{board.board}</span>
+                      <span className={`font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-800'}`}>{board.board}</span>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-gray-900">{board.count}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{board.count}</p>
+                      <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                         {Math.round((board.count / overviewStats.totalStudents) * 100)}%
                       </p>
                     </div>
@@ -467,22 +469,22 @@ const Analytics: React.FC = () => {
                 ))}
               </div>
             ) : (
-              <p className="text-gray-500 text-center py-8">No board data available</p>
+              <p className={`text-center py-8 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>No board data available</p>
             )}
           </div>
         </div>
       </div>
 
       {/* Standard Distribution with Horizontal Bar Chart */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="p-6 border-b border-gray-100">
+      <div className={`rounded-xl shadow-sm border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
+        <div className={`p-6 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-100'}`}>
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2">
                 <TrendingUp className="text-purple-600" size={24} />
-                <h2 className="text-xl font-bold text-gray-800">Standard Distribution</h2>
+                <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Standard Distribution</h2>
               </div>
-              <p className="text-sm text-gray-600 mt-1">Student enrollment across standards</p>
+              <p className={`text-sm mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Student enrollment across standards</p>
             </div>
             <div className="text-right">
               <p className="text-xs text-gray-500">Total Standards</p>
@@ -504,11 +506,11 @@ const Analytics: React.FC = () => {
                 
                 return (
                   <div key={idx} className="flex items-center gap-4">
-                    <div className="w-24 font-semibold text-gray-700">
+                    <div className={`w-24 font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                       Standard {std.standard}
                     </div>
                     <div className="flex-1 relative">
-                      <div className="w-full bg-gray-100 rounded-full h-8 overflow-hidden">
+                      <div className={`w-full rounded-full h-8 overflow-hidden ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
                         <div
                           className={`${bgColors[idx % bgColors.length]} h-full rounded-full transition-all duration-500 flex items-center justify-between px-3`}
                           style={{ width: `${percentage}%`, minWidth: std.count > 0 ? '60px' : '0px' }}
@@ -527,24 +529,24 @@ const Analytics: React.FC = () => {
               })}
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-8">No standard data available</p>
+            <p className={`text-center py-8 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>No standard data available</p>
           )}
         </div>
       </div>
 
       {/* Activity Statistics with Stacked View */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="p-6 border-b border-gray-100">
+      <div className={`rounded-xl shadow-sm border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
+        <div className={`p-6 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-100'}`}>
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2">
                 <Activity className="text-orange-600" size={24} />
-                <h2 className="text-xl font-bold text-gray-800">Activity Statistics</h2>
+                <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Activity Statistics</h2>
               </div>
-              <p className="text-sm text-gray-600 mt-1">System-wide activity breakdown</p>
+              <p className={`text-sm mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>System-wide activity breakdown</p>
             </div>
             <div className="text-right">
-              <p className="text-xs text-gray-500">Total Activities</p>
+              <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Total Activities</p>
               <p className="text-2xl font-bold text-orange-600">
                 {Object.values(logStats).reduce((sum: number, count) => sum + (count as number), 0)}
               </p>
@@ -559,14 +561,9 @@ const Analytics: React.FC = () => {
                 .map(([action, count], idx) => {
                   const totalActivities = Object.values(logStats).reduce((sum: number, c) => sum + (c as number), 0) as number;
                   const percentage = totalActivities > 0 ? ((count as number) / totalActivities) * 100 : 0;
-                  const iconColors = [
-                    'bg-orange-100 text-orange-600',
-                    'bg-blue-100 text-blue-600',
-                    'bg-green-100 text-green-600',
-                    'bg-purple-100 text-purple-600',
-                    'bg-pink-100 text-pink-600',
-                    'bg-cyan-100 text-cyan-600',
-                  ];
+                  const iconColors = isDarkMode
+                    ? ['bg-orange-900 text-orange-400', 'bg-blue-900 text-blue-400', 'bg-green-900 text-green-400', 'bg-purple-900 text-purple-400', 'bg-pink-900 text-pink-400', 'bg-cyan-900 text-cyan-400']
+                    : ['bg-orange-100 text-orange-600', 'bg-blue-100 text-blue-600', 'bg-green-100 text-green-600', 'bg-purple-100 text-purple-600', 'bg-pink-100 text-pink-600', 'bg-cyan-100 text-cyan-600'];
                   const barColors = [
                     'bg-orange-500',
                     'bg-blue-500',
@@ -577,25 +574,25 @@ const Analytics: React.FC = () => {
                   ];
                   
                   return (
-                    <div key={idx} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-lg transition">
+                    <div key={idx} className={`flex items-center gap-4 p-3 rounded-lg transition ${isDarkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-50 hover:bg-gray-100'}`}>
                       <div className={`${iconColors[idx % iconColors.length]} p-2 rounded-lg`}>
                         <Activity size={16} />
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-semibold text-gray-800">
+                          <span className={`text-sm font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-800'}`}>
                             {formatActionName(action)}
                           </span>
                           <div className="flex items-center gap-3">
-                            <span className="text-xs text-gray-500">
+                            <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                               {percentage.toFixed(1)}%
                             </span>
-                            <span className="text-lg font-bold text-gray-900">
+                            <span className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                               {count}
                             </span>
                           </div>
                         </div>
-                        <div className="w-full bg-gray-100 rounded-full h-2">
+                        <div className={`w-full rounded-full h-2 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-100'}`}>
                           <div
                             className={`${barColors[idx % barColors.length]} h-2 rounded-full transition-all duration-500`}
                             style={{ width: `${percentage}%` }}
@@ -607,23 +604,23 @@ const Analytics: React.FC = () => {
                 })}
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-8">No activity data available</p>
+            <p className={`text-center py-8 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>No activity data available</p>
           )}
         </div>
       </div>
 
       {/* Recent Activity Timeline */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="p-6 border-b border-gray-100">
+      <div className={`rounded-xl shadow-sm border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
+        <div className={`p-6 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-100'}`}>
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2">
                 <Clock className="text-blue-600" size={24} />
-                <h2 className="text-xl font-bold text-gray-800">Recent Activity</h2>
+                <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Recent Activity</h2>
               </div>
-              <p className="text-sm text-gray-600 mt-1">Latest system activities and changes</p>
+              <p className={`text-sm mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Latest system activities and changes</p>
             </div>
-            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+            <span className={`text-xs px-2 py-1 rounded ${isDarkMode ? 'bg-blue-900 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
               Last {recentActivity.length} activities
             </span>
           </div>
@@ -632,11 +629,16 @@ const Analytics: React.FC = () => {
           {recentActivity.length > 0 ? (
             <div className="relative">
               {/* Timeline Line */}
-              <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+              <div className={`absolute left-6 top-0 bottom-0 w-0.5 ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'}`}></div>
               
               <div className="space-y-4">
                 {recentActivity.map((log, idx) => {
-                  const actionColors: { [key: string]: string } = {
+                  const actionColors: { [key: string]: string } = isDarkMode ? {
+                    'create': 'bg-green-900 text-green-300',
+                    'update': 'bg-blue-900 text-blue-300',
+                    'delete': 'bg-red-900 text-red-300',
+                    'default': 'bg-indigo-900 text-indigo-300'
+                  } : {
                     'create': 'bg-green-100 text-green-600',
                     'update': 'bg-blue-100 text-blue-600',
                     'delete': 'bg-red-100 text-red-600',
@@ -653,25 +655,25 @@ const Analytics: React.FC = () => {
                       <div className={`absolute left-4 w-5 h-5 rounded-full border-4 border-white ${actionColors[actionType]} shadow-sm z-10`}></div>
                       
                       {/* Content Card */}
-                      <div className="flex-1 bg-gray-50 rounded-lg p-4 hover:shadow-md transition">
+                      <div className={`flex-1 rounded-lg p-4 hover:shadow-md transition ${isDarkMode ? 'bg-gray-900 border border-gray-700' : 'bg-gray-50'}`}>
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2">
                               <span className={`px-2 py-1 rounded text-xs font-semibold ${actionColors[actionType]}`}>
                                 {formatActionName(log.action)}
                               </span>
-                              <span className="text-xs text-gray-500">{log.formattedTime}</span>
+                              <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{log.formattedTime}</span>
                             </div>
-                            <p className="text-sm text-gray-800 font-medium">
-                              {log.entityType}: <span className="text-gray-900">{log.entityName}</span>
+                            <p className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-800'}`}>
+                              {log.entityType}: <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>{log.entityName}</span>
                             </p>
                             {log.performedBy && (
-                              <p className="text-xs text-gray-500 mt-1">
+                              <p className={`text-xs mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                                 By: {log.performedBy}
                               </p>
                             )}
                             {log.details && Object.keys(log.details).length > 0 && (
-                              <div className="mt-2 text-xs text-gray-600 bg-white p-2 rounded border border-gray-200">
+                              <div className={`mt-2 text-xs p-2 rounded border ${isDarkMode ? 'bg-gray-800 border-gray-600 text-gray-400' : 'bg-white border-gray-200 text-gray-600'}`}>
                                 <span className="font-medium">Details: </span>
                                 {JSON.stringify(log.details).substring(0, 150)}
                                 {JSON.stringify(log.details).length > 150 && '...'}
@@ -687,8 +689,8 @@ const Analytics: React.FC = () => {
             </div>
           ) : (
             <div className="text-center py-12">
-              <Clock size={48} className="mx-auto mb-3 text-gray-300" />
-              <p className="text-gray-500">No recent activity</p>
+              <Clock size={48} className={`mx-auto mb-3 ${isDarkMode ? 'text-gray-600' : 'text-gray-300'}`} />
+              <p className={isDarkMode ? 'text-gray-400' : 'text-gray-500'}>No recent activity</p>
             </div>
           )}
         </div>

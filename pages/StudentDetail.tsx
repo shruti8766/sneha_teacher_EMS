@@ -1,24 +1,32 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../services/api';
-import { Student, FeePlan, Homework, Test, TestResult, ApiListResponse } from '../types';
+import { Student, FeePlan, Homework, Test, TestResult, ApiListResponse, Teacher, AssignedTeacher, Batch } from '../types';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
-import { Loader2, DollarSign, Book, FileText, Plus, Edit2, Trash2, CreditCard, BookOpen, Calendar } from 'lucide-react';
+import { useDarkMode } from '../context/DarkModeContext';
+import { useDetail } from '../context/DetailContext';
+import { Loader2, DollarSign, Book, FileText, Plus, Edit2, Trash2, CreditCard, BookOpen, Calendar, UserCheck, X, Users } from 'lucide-react';
 import Modal from '../components/Modal';
-
 const StudentDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { showToast } = useToast();
   const { user } = useAuth();
+  const { isDarkMode } = useDarkMode();
+  const { setDetail, clearDetail } = useDetail();
 
   const [student, setStudent] = useState<Student | null>(null);
   const [feePlan, setFeePlan] = useState<any | null>(null);
   const [homework, setHomework] = useState<Homework[]>([]);
   const [tests, setTests] = useState<Test[]>([]);
   const [testResults, setTestResults] = useState<TestResult[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [assignedTeachers, setAssignedTeachers] = useState<AssignedTeacher[]>([]);
+  const [studentBatch, setStudentBatch] = useState<Batch | null>(null);
+  const [allBatches, setAllBatches] = useState<Batch[]>([]);
+  const [batchTeacher, setBatchTeacher] = useState<Teacher | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'fees' | 'homework' | 'tests'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'fees' | 'homework' | 'tests' | 'batch'>('overview');
 
   // Modal states
   const [isHomeworkModalOpen, setIsHomeworkModalOpen] = useState(false);
@@ -27,6 +35,7 @@ const StudentDetail: React.FC = () => {
   const [isAssignFeePlanModalOpen, setIsAssignFeePlanModalOpen] = useState(false);
   const [isRecordPaymentModalOpen, setIsRecordPaymentModalOpen] = useState(false);
   const [isEditStudentModalOpen, setIsEditStudentModalOpen] = useState(false);
+  const [isAssignTeacherModalOpen, setIsAssignTeacherModalOpen] = useState(false);
   const [selectedTest, setSelectedTest] = useState<Test | null>(null);
   const [editingHomework, setEditingHomework] = useState<Homework | null>(null);
   
@@ -82,6 +91,10 @@ const StudentDetail: React.FC = () => {
 
   const [submitting, setSubmitting] = useState(false);
   const [selectedHomework, setSelectedHomework] = useState<Homework | null>(null);
+  const [teacherAssignmentForm, setTeacherAssignmentForm] = useState({
+    teacherId: '',
+    subjects: ''
+  });
 
   useEffect(() => {
     const fetchStudentDetails = async () => {
@@ -97,6 +110,8 @@ const StudentDetail: React.FC = () => {
         }
         
         setStudent(foundStudent);
+        // Set the detail name in the sidebar
+        setDetail(foundStudent.name, 'student');
 
         // Fetch Fee Plan - Try multiple endpoints for compatibility
         let feePlanData = null;
@@ -170,6 +185,43 @@ const StudentDetail: React.FC = () => {
           setTestResults([]);
         }
 
+        // Fetch Batches to find which batch this student is in
+        try {
+          const batchesResponse = await api.get<ApiListResponse<Batch>>('/batches?limit=1000');
+          const batches = batchesResponse.items || [];
+          setAllBatches(batches);
+          
+          // Find the batch that contains this student
+          const studentBatchData = batches.find(batch => 
+            batch.studentIds && (batch.studentIds.includes(id) || batch.studentIds.includes(foundStudent.userId || ''))
+          );
+          
+          if (studentBatchData) {
+            setStudentBatch(studentBatchData);
+            
+            // If batch has a teacher ID, fetch that teacher's details
+            if (studentBatchData.teacherId) {
+              try {
+                const teacherResponse = await api.get<Teacher>(`/teachers/${studentBatchData.teacherId}`);
+                setBatchTeacher(teacherResponse);
+              } catch (error) {
+                // Teacher endpoint may not be available, use teacherName from batch instead
+                if (studentBatchData.teacherName) {
+                  setBatchTeacher({ 
+                    id: studentBatchData.teacherId, 
+                    name: studentBatchData.teacherName, 
+                    email: '', 
+                    phone: '' 
+                  });
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Failed to fetch batch information:', error);
+          setAllBatches([]);
+        }
+
       } catch (error: any) {
         showToast(error.message || 'Failed to load student details', 'error');
         console.error('Failed to load student details:', error);
@@ -179,7 +231,67 @@ const StudentDetail: React.FC = () => {
     };
 
     fetchStudentDetails();
+    loadTeachers();
+
+    // Cleanup: Clear detail view when leaving this page
+    return () => {
+      clearDetail();
+    };
   }, [id, showToast]);
+
+  // Load teachers for assignment
+  const loadTeachers = async () => {
+    try {
+      const response = await api.get<ApiListResponse<Teacher>>('/teachers?limit=1000');
+      setTeachers(response.items.filter(t => t.active !== false));
+    } catch (error) {
+      console.error('Failed to load teachers:', error);
+    }
+  };
+
+  // Teacher Assignment Functions
+  const handleAssignTeacher = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id || !student) return;
+    setSubmitting(true);
+    try {
+      const selectedTeacher = teachers.find(t => t.id === teacherAssignmentForm.teacherId);
+      if (!selectedTeacher) throw new Error('Teacher not found');
+
+      const payload = {
+        teacherId: teacherAssignmentForm.teacherId,
+        teacherName: selectedTeacher.name,
+        subjects: teacherAssignmentForm.subjects.split(',').map(s => s.trim()).filter(Boolean),
+        assignedAt: new Date().toISOString()
+      };
+
+      // Note: This API endpoint needs to be implemented in backend
+      await api.post(`/students/${id}/assign-teacher`, payload);
+      
+      // Update local state
+      setAssignedTeachers(prev => [...prev, payload as AssignedTeacher]);
+      showToast('Teacher assigned successfully');
+      setIsAssignTeacherModalOpen(false);
+      setTeacherAssignmentForm({ teacherId: '', subjects: '' });
+    } catch (error: any) {
+      showToast(error.message || 'Failed to assign teacher', 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleRemoveTeacher = async (teacherId: string) => {
+    if (!id) return;
+    if (!window.confirm('Are you sure you want to remove this teacher assignment?')) return;
+    try {
+      // Note: This API endpoint needs to be implemented in backend
+      await api.delete(`/students/${id}/teachers/${teacherId}`);
+      setAssignedTeachers(prev => prev.filter(t => t.teacherId !== teacherId));
+      showToast('Teacher removed successfully');
+    } catch (error: any) {
+      showToast(error.message || 'Failed to remove teacher', 'error');
+    }
+  };
 
   // Homework Functions
   const handleCreateHomework = async (e: React.FormEvent) => {
@@ -532,20 +644,20 @@ const StudentDetail: React.FC = () => {
   }
 
   if (!student) {
-    return <div className="text-center p-12 text-gray-500">Student not found.</div>;
+    return <div className={`text-center p-12 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Student not found.</div>;
   }
 
   const isAdmin = user?.role === 'admin' || user?.role === 'teacher';
 
   return (
-    <div className="space-y-6 p-6 bg-gray-50 min-h-screen max-w-7xl mx-auto">
+    <div className={`space-y-6 p-6 min-h-screen max-w-7xl mx-auto px-4 md:px-8 py-6 ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
       {/* Header Section */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+      <div className={`rounded-xl shadow-sm border p-8 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">{student.name}</h1>
-            <p className="text-lg text-gray-600 mb-1">{student.email}</p>
-            <p className="text-sm text-gray-500">{student.phone || 'No phone number'}</p>
+            <h1 className={`text-4xl font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{student.name}</h1>
+            <p className={`text-lg mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{student.email}</p>
+            <p className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>{student.phone || 'No phone number'}</p>
           </div>
           <div className="flex gap-2">
             <span className={`px-4 py-2 rounded-lg text-sm font-medium ${student.active ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
@@ -555,39 +667,45 @@ const StudentDetail: React.FC = () => {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 mt-6 border-b border-gray-200">
+        <div className={`flex gap-2 mt-6 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
           <button 
             onClick={() => setActiveTab('overview')}
-            className={`px-6 py-3 text-sm font-medium transition border-b-2 ${activeTab === 'overview' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600 hover:text-gray-900'}`}
+            className={`px-6 py-3 text-sm font-medium transition border-b-2 ${activeTab === 'overview' ? 'border-blue-600 text-blue-600' : `border-transparent ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}`}
           >
             Overview
           </button>
           <button 
             onClick={() => setActiveTab('fees')}
-            className={`px-6 py-3 text-sm font-medium transition border-b-2 ${activeTab === 'fees' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600 hover:text-gray-900'}`}
+            className={`px-6 py-3 text-sm font-medium transition border-b-2 ${activeTab === 'fees' ? 'border-blue-600 text-blue-600' : `border-transparent ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}`}
           >
             Fee Plan
           </button>
           <button 
             onClick={() => setActiveTab('homework')}
-            className={`px-6 py-3 text-sm font-medium transition border-b-2 ${activeTab === 'homework' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600 hover:text-gray-900'}`}
+            className={`px-6 py-3 text-sm font-medium transition border-b-2 ${activeTab === 'homework' ? 'border-blue-600 text-blue-600' : `border-transparent ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}`}
           >
             Homework ({homework.length})
           </button>
           <button 
             onClick={() => setActiveTab('tests')}
-            className={`px-6 py-3 text-sm font-medium transition border-b-2 ${activeTab === 'tests' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600 hover:text-gray-900'}`}
+            className={`px-6 py-3 text-sm font-medium transition border-b-2 ${activeTab === 'tests' ? 'border-blue-600 text-blue-600' : `border-transparent ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}`}
           >
             Tests & Results ({tests.length})
+          </button>
+          <button 
+            onClick={() => setActiveTab('batch')}
+            className={`px-6 py-3 text-sm font-medium transition border-b-2 ${activeTab === 'batch' ? 'border-blue-600 text-blue-600' : `border-transparent ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}`}
+          >
+            Batch & Teacher
           </button>
         </div>
       </div>
 
       {/* Overview Tab */}
       {activeTab === 'overview' && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 space-y-6">
+        <div className={`rounded-xl shadow-sm border p-8 space-y-6 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-semibold text-gray-800">Student Information</h2>
+            <h2 className={`text-2xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Student Information</h2>
             {isAdmin && (
               <button
                 onClick={handleOpenEditStudent}
@@ -597,93 +715,103 @@ const StudentDetail: React.FC = () => {
               </button>
             )}
           </div>
-          <div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <span className="text-xs font-medium text-gray-500 uppercase block mb-1">Board</span>
-                <span className="text-lg font-semibold text-gray-900">{student.board}</span>
+
+          {/* Quick Stats Row */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
+              <span className="text-xs font-medium text-blue-600 uppercase block mb-2">Board</span>
+              <span className="text-lg font-bold text-blue-900">{student.board}</span>
+            </div>
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200">
+              <span className="text-xs font-medium text-purple-600 uppercase block mb-2">Standard</span>
+              <span className="text-lg font-bold text-purple-900">{student.standard}</span>
+            </div>
+            <div className="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border border-green-200">
+              <span className="text-xs font-medium text-green-600 uppercase block mb-2">Joined</span>
+              <span className="text-lg font-bold text-green-900">{new Date(student.createdAt?.seconds * 1000 || student.joinedAt).toLocaleDateString()}</span>
+            </div>
+            <div className={`bg-gradient-to-br p-4 rounded-lg border ${student.active ? 'from-emerald-50 to-emerald-100 border-emerald-200' : 'from-red-50 to-red-100 border-red-200'}`}>
+              <span className="text-xs font-medium uppercase block mb-2" style={{ color: student.active ? '#047857' : '#dc2626' }}>Status</span>
+              <span className="text-lg font-bold" style={{ color: student.active ? '#065f46' : '#7f1d1d' }}>
+                {student.active ? 'Active' : 'Inactive'}
+              </span>
+            </div>
+          </div>
+
+          {/* Subjects */}
+          <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+            <span className="text-xs font-medium text-blue-700 uppercase block mb-3">Subjects</span>
+            <div className="flex flex-wrap gap-2">
+              {student.subjects && student.subjects.length > 0 ? (
+                student.subjects.map((subject, idx) => (
+                  <span key={idx} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">
+                    {subject}
+                  </span>
+                ))
+              ) : (
+                <span className="text-blue-700">No subjects assigned</span>
+              )}
+            </div>
+          </div>
+
+          {/* Contact & School Info Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Contact Column */}
+            <div className="space-y-3">
+              <h3 className={`font-semibold text-sm uppercase ${isDarkMode ? 'text-gray-300' : 'text-gray-800'}`}>Contact Information</h3>
+              <div className={`p-3 rounded-lg border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+                <span className={`text-xs uppercase block mb-1 font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Email</span>
+                <span className={`text-sm font-semibold break-all ${isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}>{student.email}</span>
               </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <span className="text-xs font-medium text-gray-500 uppercase block mb-1">Standard</span>
-                <span className="text-lg font-semibold text-gray-900">{student.standard}</span>
+              <div className={`p-3 rounded-lg border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+                <span className={`text-xs uppercase block mb-1 font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Phone</span>
+                <span className={`text-sm font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}>{student.phone || 'Not provided'}</span>
               </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <span className="text-xs font-medium text-gray-500 uppercase block mb-1">Joined</span>
-                <span className="text-lg font-semibold text-gray-900">{new Date(student.createdAt?.seconds * 1000 || student.joinedAt).toLocaleDateString()}</span>
-              </div>
-              <div className="bg-gray-50 p-4 rounded-lg md:col-span-2 lg:col-span-3">
-                <span className="text-xs font-medium text-gray-500 uppercase block mb-1">Subjects</span>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {student.subjects && student.subjects.length > 0 ? (
-                    student.subjects.map((subject, idx) => (
-                      <span key={idx} className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-                        {subject}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-gray-500">No subjects assigned</span>
-                  )}
-                </div>
+            </div>
+
+            {/* School Column */}
+            <div className="space-y-3">
+              <h3 className={`font-semibold text-sm uppercase ${isDarkMode ? 'text-gray-300' : 'text-gray-800'}`}>School Information</h3>
+              <div className={`p-3 rounded-lg border ${isDarkMode ? 'bg-blue-900 border-blue-700' : 'bg-blue-50 border-blue-200'}`}>
+                <span className={`text-xs uppercase block mb-1 font-medium ${isDarkMode ? 'text-blue-300' : 'text-blue-700'}`}>School Name</span>
+                <span className={`text-sm font-semibold ${isDarkMode ? 'text-blue-100' : 'text-blue-900'}`}>{student.schoolName || 'Not provided'}</span>
               </div>
             </div>
           </div>
 
-          <div className="border-t pt-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Contact Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <span className="text-xs font-medium text-gray-500 uppercase block mb-1">Email</span>
-                <span className="text-lg font-semibold text-gray-900">{student.email}</span>
+          {/* Parent Info Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Parent Basic Info */}
+            <div className="space-y-3">
+              <h3 className={`font-semibold text-sm uppercase ${isDarkMode ? 'text-gray-300' : 'text-gray-800'}`}>Parent Contact</h3>
+              <div className={`p-3 rounded-lg border ${isDarkMode ? 'bg-purple-900 border-purple-700' : 'bg-purple-50 border-purple-200'}`}>
+                <span className={`text-xs uppercase block mb-1 font-medium ${isDarkMode ? 'text-purple-300' : 'text-purple-700'}`}>Name</span>
+                <span className={`text-sm font-semibold ${isDarkMode ? 'text-purple-100' : 'text-purple-900'}`}>{(student as any).parent?.name || student.parentName || 'Not provided'}</span>
               </div>
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <span className="text-xs font-medium text-gray-500 uppercase block mb-1">Phone</span>
-                <span className="text-lg font-semibold text-gray-900">{student.phone || 'Not provided'}</span>
+              <div className={`p-3 rounded-lg border ${isDarkMode ? 'bg-purple-900 border-purple-700' : 'bg-purple-50 border-purple-200'}`}>
+                <span className={`text-xs uppercase block mb-1 font-medium ${isDarkMode ? 'text-purple-300' : 'text-purple-700'}`}>Phone</span>
+                <span className={`text-sm font-semibold ${isDarkMode ? 'text-purple-100' : 'text-purple-900'}`}>{(student as any).parent?.phone || student.parentPhone || 'Not provided'}</span>
               </div>
-            </div>
-          </div>
-
-          <div className="border-t pt-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">School Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                <span className="text-xs font-medium text-blue-700 uppercase block mb-1">School Name</span>
-                <span className="text-lg font-semibold text-blue-900">{student.schoolName || 'Not provided'}</span>
+              <div className={`p-3 rounded-lg border ${isDarkMode ? 'bg-purple-900 border-purple-700' : 'bg-purple-50 border-purple-200'}`}>
+                <span className={`text-xs uppercase block mb-1 font-medium ${isDarkMode ? 'text-purple-300' : 'text-purple-700'}`}>Email</span>
+                <span className={`text-sm font-semibold break-all ${isDarkMode ? 'text-purple-100' : 'text-purple-900'}`}>{(student as any).parent?.email || student.parentEmail || 'Not provided'}</span>
               </div>
             </div>
-          </div>
 
-          <div className="border-t pt-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Parent Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-                <span className="text-xs font-medium text-purple-700 uppercase block mb-1">Parent Name</span>
-                <span className="text-lg font-semibold text-purple-900">{(student as any).parent?.name || student.parentName || 'Not provided'}</span>
+            {/* Parent Professional Info */}
+            <div className="space-y-3">
+              <h3 className={`font-semibold text-sm uppercase ${isDarkMode ? 'text-gray-300' : 'text-gray-800'}`}>Parent Professional</h3>
+              <div className={`p-3 rounded-lg border ${isDarkMode ? 'bg-indigo-900 border-indigo-700' : 'bg-indigo-50 border-indigo-200'}`}>
+                <span className={`text-xs uppercase block mb-1 font-medium ${isDarkMode ? 'text-indigo-300' : 'text-indigo-700'}`}>Profession</span>
+                <span className={`text-sm font-semibold ${isDarkMode ? 'text-indigo-100' : 'text-indigo-900'}`}>{(student as any).parent?.profession || student.parentProfession || 'Not provided'}</span>
               </div>
-              <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-                <span className="text-xs font-medium text-purple-700 uppercase block mb-1">Parent Phone</span>
-                <span className="text-lg font-semibold text-purple-900">{(student as any).parent?.phone || student.parentPhone || 'Not provided'}</span>
+              <div className={`p-3 rounded-lg border ${isDarkMode ? 'bg-indigo-900 border-indigo-700' : 'bg-indigo-50 border-indigo-200'}`}>
+                <span className={`text-xs uppercase block mb-1 font-medium ${isDarkMode ? 'text-indigo-300' : 'text-indigo-700'}`}>Company</span>
+                <span className={`text-sm font-semibold ${isDarkMode ? 'text-indigo-100' : 'text-indigo-900'}`}>{(student as any).parent?.companyName || student.parentCompanyName || 'Not provided'}</span>
               </div>
-              <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-                <span className="text-xs font-medium text-purple-700 uppercase block mb-1">Parent Email</span>
-                <span className="text-lg font-semibold text-purple-900">{(student as any).parent?.email || student.parentEmail || 'Not provided'}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="border-t pt-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Parent Professional Info</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
-                <span className="text-xs font-medium text-indigo-700 uppercase block mb-1">Profession</span>
-                <span className="text-lg font-semibold text-indigo-900">{(student as any).parent?.profession || student.parentProfession || 'Not provided'}</span>
-              </div>
-              <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
-                <span className="text-xs font-medium text-indigo-700 uppercase block mb-1">Company Name</span>
-                <span className="text-lg font-semibold text-indigo-900">{(student as any).parent?.companyName || student.parentCompanyName || 'Not provided'}</span>
-              </div>
-              <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
-                <span className="text-xs font-medium text-indigo-700 uppercase block mb-1">Designation</span>
-                <span className="text-lg font-semibold text-indigo-900">{(student as any).parent?.designation || student.parentDesignation || 'Not provided'}</span>
+              <div className={`p-3 rounded-lg border ${isDarkMode ? 'bg-indigo-900 border-indigo-700' : 'bg-indigo-50 border-indigo-200'}`}>
+                <span className={`text-xs uppercase block mb-1 font-medium ${isDarkMode ? 'text-indigo-300' : 'text-indigo-700'}`}>Designation</span>
+                <span className={`text-sm font-semibold ${isDarkMode ? 'text-indigo-100' : 'text-indigo-900'}`}>{(student as any).parent?.designation || student.parentDesignation || 'Not provided'}</span>
               </div>
             </div>
           </div>
@@ -692,7 +820,7 @@ const StudentDetail: React.FC = () => {
 
       {/* Fee Plan Tab */}
       {activeTab === 'fees' && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+        <div className={`rounded-xl shadow-sm border p-8 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-semibold text-gray-800 flex items-center gap-2">
               <DollarSign size={28} className="text-green-600" /> Fee Plan
@@ -722,27 +850,27 @@ const StudentDetail: React.FC = () => {
                 <span className="text-xs font-medium text-green-600 uppercase block mb-1">Amount</span>
                 <span className="text-2xl font-bold text-green-700">{feePlan.currency || 'INR'} {feePlan.amount}</span>
               </div>
-              <div className="bg-gray-50 p-5 rounded-lg">
-                <span className="text-xs font-medium text-gray-500 uppercase block mb-1">Frequency</span>
-                <span className="text-lg font-semibold text-gray-900 capitalize">{feePlan.frequency || 'N/A'}</span>
+              <div className={`p-5 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                <span className={`text-xs font-medium uppercase block mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Frequency</span>
+                <span className={`text-lg font-semibold capitalize ${isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}>{feePlan.frequency || 'N/A'}</span>
               </div>
-              <div className="bg-gray-50 p-5 rounded-lg">
-                <span className="text-xs font-medium text-gray-500 uppercase block mb-1">Status</span>
+              <div className={`p-5 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                <span className={`text-xs font-medium uppercase block mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Status</span>
                 <span className={`text-lg font-semibold ${feePlan.isActive ? 'text-green-600' : 'text-red-600'}`}>
                   {feePlan.isActive ? 'Active' : 'Inactive'}
                 </span>
               </div>
               {feePlan.startMonth && (
-                <div className="bg-gray-50 p-5 rounded-lg">
-                  <span className="text-xs font-medium text-gray-500 uppercase block mb-1">Start Month</span>
-                  <span className="text-lg font-semibold text-gray-900">{feePlan.startMonth}</span>
+                <div className={`p-5 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                  <span className={`text-xs font-medium uppercase block mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Start Month</span>
+                  <span className={`text-lg font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}>{feePlan.startMonth}</span>
                 </div>
               )}
             </div>
           ) : (
             <div className="text-center py-12">
               <DollarSign size={48} className="mx-auto text-gray-300 mb-3" />
-              <p className="text-gray-500 text-lg">No fee plan assigned to this student</p>
+              <p className={`${isDarkMode ? 'text-gray-400' : 'text-gray-500'} text-lg`}>No fee plan assigned to this student</p>
             </div>
           )}
         </div>
@@ -751,7 +879,7 @@ const StudentDetail: React.FC = () => {
       {/* Homework Tab */}
       {/* Homework Tab */}
         {activeTab === 'homework' && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+        <div className={`rounded-xl shadow-sm border p-8 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
             <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-semibold text-gray-800 flex items-center gap-2">
                 <Book size={28} className="text-blue-600" /> Homework Assignments
@@ -771,10 +899,10 @@ const StudentDetail: React.FC = () => {
                 <div 
                     key={hw.id} 
                     onClick={() => handleViewHomework(hw)}
-                    className="border border-gray-200 rounded-lg p-5 bg-gray-50 hover:shadow-md transition cursor-pointer"
+                    className={`border rounded-lg p-5 hover:shadow-md transition cursor-pointer ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}`}
                 >
                     <div className="flex justify-between items-start mb-3">
-                    <h3 className="font-semibold text-gray-900 text-lg">{hw.title}</h3>
+                    <h3 className={`font-semibold text-lg ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{hw.title}</h3>
                     {isAdmin && (
                       <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                       <button 
@@ -795,10 +923,10 @@ const StudentDetail: React.FC = () => {
                         </div>
                     )}
                     </div>
-                    <p className="text-sm text-gray-600 mb-3">{hw.description}</p>
+                    <p className={`text-sm mb-3 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>{hw.description}</p>
                     <div className="flex flex-wrap gap-2 items-center text-xs">
-                    <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">{hw.subject}</span>
-                    <span className="text-gray-500">Due: {new Date(hw.dueAt).toLocaleDateString()}</span>
+                    <span className={`px-3 py-1 rounded-full font-medium ${isDarkMode ? 'bg-blue-900 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>{hw.subject}</span>
+                    <span className={isDarkMode ? 'text-gray-400' : 'text-gray-500'}>Due: {new Date(hw.dueAt).toLocaleDateString()}</span>
                     </div>
                 </div>
                 ))}
@@ -806,7 +934,7 @@ const StudentDetail: React.FC = () => {
             ) : (
             <div className="text-center py-12">
                 <Book size={48} className="mx-auto text-gray-300 mb-3" />
-                <p className="text-gray-500 text-lg">No homework assigned yet</p>
+                <p className={`text-lg ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>No homework assigned yet</p>
             </div>
             )}
         </div>
@@ -814,7 +942,7 @@ const StudentDetail: React.FC = () => {
 
       {/* Tests Tab */}
       {activeTab === 'tests' && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8">
+        <div className={`rounded-xl shadow-sm border p-8 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-semibold text-gray-800 flex items-center gap-2">
               <FileText size={28} className="text-purple-600" /> Tests & Results
@@ -833,11 +961,11 @@ const StudentDetail: React.FC = () => {
               {tests.map((test) => {
                 const result = testResults.find((res) => res.testId === test.id && res.studentId === id);
                 return (
-                  <div key={test.id} className="border border-gray-200 rounded-lg p-5 bg-gray-50 hover:shadow-md transition">
+                  <div key={test.id} className={`border rounded-lg p-5 hover:shadow-md transition ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
                         <div className="flex justify-between items-start mb-3">
                             <div>
-                            <h3 className="font-semibold text-gray-900 text-lg">{test.title || 'Untitled Test'}</h3>
-                            <p className="text-sm text-gray-600">{test.subject}</p>
+                            <h3 className={`font-semibold text-lg ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{test.title || 'Untitled Test'}</h3>
+                            <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{test.subject}</p>
                             </div>
                             {/* ADD DELETE BUTTON HERE */}
                             {isAdmin && (
@@ -851,8 +979,8 @@ const StudentDetail: React.FC = () => {
                             )}
                     </div>
                     <div className="space-y-2 mb-3">
-                      <p className="text-xs text-gray-500">Date: {new Date(test.date).toLocaleString()}</p>
-                      <p className="text-xs text-gray-500">Total Marks: {test.totalMarks} | Duration: {test.duration} mins</p>
+                      <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Date: {new Date(test.date).toLocaleString()}</p>
+                      <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Total Marks: {test.totalMarks} | Duration: {test.duration} mins</p>
                     </div>
                     {result ? (
                       <div className="bg-white p-4 rounded-lg border border-gray-200">
@@ -891,8 +1019,235 @@ const StudentDetail: React.FC = () => {
           ) : (
             <div className="text-center py-12">
               <FileText size={48} className="mx-auto text-gray-300 mb-3" />
-              <p className="text-gray-500 text-lg">No tests found for this student</p>
+              <p className={`text-lg ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>No tests found for this student</p>
             </div>
+          )}
+        </div>
+      )}
+
+      {/* Batch & Teacher Tab */}
+      {activeTab === 'batch' && (
+        <div className={`rounded-xl shadow-sm border p-8 space-y-8 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
+          <h2 className={`text-2xl font-semibold mb-6 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Batch & Teacher Information</h2>
+          
+          {/* Batch & Batch Teacher Section */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Batch Information */}
+            <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-amber-900 border-amber-700' : 'bg-amber-50 border-amber-200'}`}>
+              <div className={`flex items-center gap-2 mb-4 ${isDarkMode ? 'text-amber-300' : 'text-amber-700'}`}>
+                <BookOpen size={20} />
+                <h4 className={`text-lg font-semibold ${isDarkMode ? 'text-amber-200' : 'text-amber-900'}`}>Batch</h4>
+              </div>
+              {studentBatch ? (
+                <div className="space-y-3">
+                  <div>
+                    <span className={`text-xs font-medium uppercase block mb-1 ${isDarkMode ? 'text-amber-300' : 'text-amber-700'}`}>Batch Name</span>
+                    <span className={`text-lg font-semibold ${isDarkMode ? 'text-amber-100' : 'text-amber-900'}`}>{studentBatch.name}</span>
+                  </div>
+                  <div>
+                    <span className={`text-xs font-medium uppercase block mb-1 ${isDarkMode ? 'text-amber-300' : 'text-amber-700'}`}>Subject</span>
+                    <span className={`text-lg font-semibold ${isDarkMode ? 'text-amber-100' : 'text-amber-900'}`}>{studentBatch.subject}</span>
+                  </div>
+                  <div className={`grid grid-cols-2 gap-2 mt-3 pt-3 border-t ${isDarkMode ? 'border-amber-700' : 'border-amber-200'}`}>
+                    <div>
+                      <span className={`text-xs font-medium uppercase block mb-1 ${isDarkMode ? 'text-amber-300' : 'text-amber-700'}`}>Board</span>
+                      <span className={`font-medium ${isDarkMode ? 'text-amber-100' : 'text-amber-900'}`}>{studentBatch.board}</span>
+                    </div>
+                    <div>
+                      <span className={`text-xs font-medium uppercase block mb-1 ${isDarkMode ? 'text-amber-300' : 'text-amber-700'}`}>Standard</span>
+                      <span className={`font-medium ${isDarkMode ? 'text-amber-100' : 'text-amber-900'}`}>{studentBatch.standard}</span>
+                    </div>
+                  </div>
+                  {studentBatch.schedule && (
+                    <div className={`mt-3 pt-3 border-t ${isDarkMode ? 'border-amber-700' : 'border-amber-200'}`}>
+                      <span className={`text-xs font-medium uppercase block mb-2 ${isDarkMode ? 'text-amber-300' : 'text-amber-700'}`}>Schedule</span>
+                      <div className={`flex items-center gap-2 text-sm ${isDarkMode ? 'text-amber-100' : 'text-amber-900'}`}>
+                        <Calendar size={16} />
+                        <span>
+                          {studentBatch.schedule.dayOfWeek} • {studentBatch.schedule.startTime} - {studentBatch.schedule.endTime}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <BookOpen size={32} className={`mx-auto mb-2 ${isDarkMode ? 'text-amber-700' : 'text-amber-300'}`} />
+                  <p className={`font-medium ${isDarkMode ? 'text-amber-300' : 'text-amber-700'}`}>Not assigned to any batch</p>
+                </div>
+              )}
+            </div>
+
+            {/* Batch Teacher Information */}
+            <div className={`p-6 rounded-lg border ${isDarkMode ? 'bg-orange-900 border-orange-700' : 'bg-orange-50 border-orange-200'}`}>
+              <div className={`flex items-center gap-2 mb-4 ${isDarkMode ? 'text-orange-300' : 'text-orange-700'}`}>
+                <Users size={20} />
+                <h4 className={`text-lg font-semibold ${isDarkMode ? 'text-orange-200' : 'text-orange-900'}`}>Batch Teacher</h4>
+              </div>
+              {batchTeacher ? (
+                <div className="space-y-3">
+                  <div>
+                    <span className={`text-xs font-medium uppercase block mb-1 ${isDarkMode ? 'text-orange-300' : 'text-orange-700'}`}>Teacher Name</span>
+                    <span className={`text-lg font-semibold ${isDarkMode ? 'text-orange-100' : 'text-orange-900'}`}>{batchTeacher.name}</span>
+                  </div>
+                  {batchTeacher.email && (
+                    <div>
+                      <span className={`text-xs font-medium uppercase block mb-1 ${isDarkMode ? 'text-orange-300' : 'text-orange-700'}`}>Email</span>
+                      <span className={`break-all ${isDarkMode ? 'text-orange-100' : 'text-orange-900'}`}>{batchTeacher.email}</span>
+                    </div>
+                  )}
+                  {batchTeacher.phone && (
+                    <div>
+                      <span className={`text-xs font-medium uppercase block mb-1 ${isDarkMode ? 'text-orange-300' : 'text-orange-700'}`}>Phone</span>
+                      <span className={isDarkMode ? 'text-orange-100' : 'text-orange-900'}>{batchTeacher.phone}</span>
+                    </div>
+                  )}
+                  {batchTeacher.subjects && batchTeacher.subjects.length > 0 && (
+                    <div className={`mt-3 pt-3 border-t ${isDarkMode ? 'border-orange-700' : 'border-orange-200'}`}>
+                      <span className={`text-xs font-medium uppercase block mb-2 ${isDarkMode ? 'text-orange-300' : 'text-orange-700'}`}>Subjects</span>
+                      <div className="flex flex-wrap gap-2">
+                        {batchTeacher.subjects.map((subject, idx) => (
+                          <span key={idx} className={`px-2 py-1 rounded text-sm font-medium border ${isDarkMode ? 'bg-orange-800 text-orange-300 border-orange-600' : 'bg-white text-orange-700 border-orange-300'}`}>
+                            {subject}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Users size={32} className={`mx-auto mb-2 ${isDarkMode ? 'text-orange-700' : 'text-orange-300'}`} />
+                  <p className={`font-medium ${isDarkMode ? 'text-orange-300' : 'text-orange-700'}`}>No teacher assigned to batch</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className={`border-t-2 ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}></div>
+
+          {/* Assigned Teachers Section */}
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className={`text-xl font-semibold ${isDarkMode ? 'text-gray-100' : 'text-gray-800'}`}>Subject Teachers</h3>
+                <p className={`text-sm mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Teachers assigned to teach specific subjects</p>
+              </div>
+              {isAdmin && (
+                <button
+                  onClick={() => setIsAssignTeacherModalOpen(true)}
+                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center gap-2 text-sm font-medium shadow-sm"
+                >
+                  <Plus size={16} /> Assign Teacher
+                </button>
+              )}
+            </div>
+
+            {assignedTeachers.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {assignedTeachers.map((assignment) => (
+                  <div className={`p-4 rounded-lg border flex items-start justify-between ${isDarkMode ? 'bg-green-900 border-green-700' : 'bg-green-50 border-green-200'}`}>
+                    <div className="flex-1">
+                      <div className={`flex items-center gap-2 mb-2 ${isDarkMode ? 'text-green-300' : 'text-green-700'}`}>
+                        <UserCheck size={18} />
+                        <span className={`font-semibold ${isDarkMode ? 'text-green-100' : 'text-green-900'}`}>{assignment.teacherName}</span>
+                      </div>
+                      {assignment.subjects && assignment.subjects.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {assignment.subjects.map((subject, idx) => (
+                            <span key={idx} className={`text-xs px-2 py-1 rounded border ${isDarkMode ? 'bg-green-800 text-green-300 border-green-600' : 'bg-white text-green-700 border-green-300'}`}>
+                              {subject}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {isAdmin && (
+                      <button
+                        onClick={() => handleRemoveTeacher(assignment.teacherId)}
+                        className={`hover:rounded transition p-1 ${isDarkMode ? 'text-red-400 hover:text-red-300 hover:bg-red-900' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
+                        title="Remove teacher"
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className={`rounded-lg border p-8 text-center ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+                <UserCheck size={32} className={`mx-auto mb-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`} />
+                <p className={`font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>No subject teachers assigned yet</p>
+              </div>
+            )}
+          </div>
+
+          {/* Suggested Teachers Section - Only show if no batch assigned */}
+          {!studentBatch && student.subjects && student.subjects.length > 0 && (
+            <>
+              <div className={`border-t-2 ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}></div>
+              <div>
+                <div className="mb-4">
+                  <h3 className={`text-xl font-semibold ${isDarkMode ? 'text-gray-100' : 'text-gray-800'}`}>Suggested Teachers</h3>
+                  <p className={`text-sm mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Teachers who teach {student.subjects.join(', ')}</p>
+                </div>
+
+                {teachers.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {teachers
+                      .filter(teacher => 
+                        teacher.subjects && teacher.subjects.some(s => student.subjects?.includes(s))
+                      )
+                      .map((teacher) => {
+                        const matchingSubjects = teacher.subjects?.filter(s => student.subjects?.includes(s)) || [];
+                        return (
+                          <div key={teacher.id} className={`p-4 rounded-lg border flex items-start justify-between ${isDarkMode ? 'bg-cyan-900 border-cyan-700' : 'bg-cyan-50 border-cyan-300'}`}>
+                            <div className="flex-1">
+                              <div className={`flex items-center gap-2 mb-2 ${isDarkMode ? 'text-cyan-300' : 'text-cyan-700'}`}>
+                                <BookOpen size={18} />
+                                <span className={`font-semibold ${isDarkMode ? 'text-cyan-100' : 'text-cyan-900'}`}>{teacher.name}</span>
+                              </div>
+                              {matchingSubjects.length > 0 && (
+                                <div className="mt-2">
+                                  <span className={`text-xs uppercase block mb-1 font-medium ${isDarkMode ? 'text-cyan-300' : 'text-cyan-700'}`}>Teaches</span>
+                                  <div className="flex flex-wrap gap-1">
+                                    {matchingSubjects.map((subject, idx) => (
+                                      <span key={idx} className={`text-xs px-2 py-1 rounded border ${isDarkMode ? 'bg-cyan-800 text-cyan-300 border-cyan-600' : 'bg-white text-cyan-700 border-cyan-300'}`}>
+                                        {subject}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            {isAdmin && (
+                              <button
+                                onClick={() => {
+                                  setTeacherAssignmentForm({
+                                    teacherId: teacher.id,
+                                    subjects: matchingSubjects.join(', ')
+                                  });
+                                  setIsAssignTeacherModalOpen(true);
+                                }}
+                                className={`px-3 py-1 rounded text-xs font-medium transition ml-2 ${isDarkMode ? 'bg-cyan-600 text-white hover:bg-cyan-700' : 'bg-cyan-600 text-white hover:bg-cyan-700'}`}
+                              >
+                                Assign
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })
+                      .slice(0, 6)}
+                  </div>
+                ) : (
+                  <div className={`rounded-lg border p-8 text-center ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+                    <Users size={32} className={`mx-auto mb-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`} />
+                    <p className={`font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>No teachers available</p>
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </div>
       )}
@@ -1407,6 +1762,58 @@ const StudentDetail: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Assign Teacher Modal */}
+      <Modal isOpen={isAssignTeacherModalOpen} onClose={() => setIsAssignTeacherModalOpen(false)} title="Assign Teacher to Student">
+        <form onSubmit={handleAssignTeacher} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Select Teacher *</label>
+            <select 
+              required
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none bg-white text-gray-900"
+              value={teacherAssignmentForm.teacherId}
+              onChange={e => setTeacherAssignmentForm({...teacherAssignmentForm, teacherId: e.target.value})}
+            >
+              <option value="">Choose a teacher</option>
+              {teachers.map(teacher => (
+                <option key={teacher.id} value={teacher.id}>
+                  {teacher.name} {teacher.subjects && teacher.subjects.length > 0 ? `(${teacher.subjects.join(', ')})` : ''}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-1">Select the teacher you want to assign to this student</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Subjects (Optional)</label>
+            <input 
+              type="text"
+              placeholder="e.g., Mathematics, Physics"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none bg-white text-gray-900"
+              value={teacherAssignmentForm.subjects}
+              onChange={e => setTeacherAssignmentForm({...teacherAssignmentForm, subjects: e.target.value})}
+            />
+            <p className="text-xs text-gray-500 mt-1">Comma-separated list of subjects this teacher will teach to this student</p>
+          </div>
+
+          <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+            <button 
+              type="button" 
+              onClick={() => setIsAssignTeacherModalOpen(false)} 
+              className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition"
+            >
+              Cancel
+            </button>
+            <button 
+              disabled={submitting} 
+              type="submit" 
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition"
+            >
+              {submitting ? 'Assigning...' : 'Assign Teacher'}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

@@ -5,7 +5,8 @@ import { api } from '../services/api';
 import { ApiListResponse, AttendanceSession, Batch, Student } from '../types';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
-import { Loader2, Plus, Calendar, Clock, CheckCircle, XCircle, AlertCircle, UserIcon, Edit2, Trash2, List } from 'lucide-react';
+import { useDarkMode } from '../context/DarkModeContext';
+import { Loader2, Plus, Calendar, Clock, CheckCircle, XCircle, AlertCircle, UserIcon, Edit2, Trash2, List, CalendarCheck } from 'lucide-react';
 import Modal from '../components/Modal';
 
 const Attendance: React.FC = () => {
@@ -15,6 +16,7 @@ const Attendance: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const { showToast } = useToast();
   const { user } = useAuth();
+  const { isDarkMode } = useDarkMode();
 
   // Create Session State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -398,9 +400,12 @@ const Attendance: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 min-h-screen px-4 md:px-8 py-6 ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-800">Attendance</h1>
+        <h1 className={`text-3xl font-bold flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+          <CalendarCheck className="text-yellow-600" size={36} />
+          Attendance
+        </h1>
         {(user?.role === 'admin' || user?.role === 'teacher') && (
           <button
             onClick={() => setIsCreateModalOpen(true)}
@@ -414,38 +419,38 @@ const Attendance: React.FC = () => {
       {loading ? (
         <div className="flex justify-center p-8"><Loader2 className="animate-spin text-indigo-600" /></div>
       ) : sessions.length === 0 ? (
-        <div className="text-center text-gray-500 p-8 bg-white rounded-xl border border-gray-100">No attendance sessions found.</div>
+        <div className={`text-center p-8 rounded-xl border ${isDarkMode ? 'text-gray-400 bg-gray-800 border-gray-700' : 'text-gray-500 bg-white border-gray-100'}`}>No attendance sessions found.</div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className={`rounded-xl shadow-sm border overflow-hidden ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
           <table className="w-full text-left">
-            <thead className="bg-gray-50 border-b border-gray-100">
+            <thead className={`border-b ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-100'}`}>
               <tr>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Created</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Batch</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Subject</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Time</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase text-right">Actions</th>
+                <th className={`px-6 py-4 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Created</th>
+                <th className={`px-6 py-4 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Batch</th>
+                <th className={`px-6 py-4 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Subject</th>
+                <th className={`px-6 py-4 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Time</th>
+                <th className={`px-6 py-4 text-xs font-semibold uppercase text-right ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className={`divide-y ${isDarkMode ? 'divide-gray-700' : 'divide-gray-100'}`}>
               {sessions.map(session => (
-                <tr key={session.id} className="hover:bg-gray-50">
+                <tr key={session.id} className={isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}>
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
-                      <div className="flex items-center gap-2 font-medium text-gray-900">
-                        <Calendar size={16} className="text-gray-400" />
+                      <div className={`flex items-center gap-2 font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}>
+                        <Calendar size={16} className={isDarkMode ? 'text-gray-500' : 'text-gray-400'} />
                         {new Date(session.date).toLocaleDateString()}
                       </div>
-                      <span className="text-xs text-gray-500 ml-6">Session for all dates</span>
+                      <span className={`text-xs ml-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Session for all dates</span>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="px-2 py-1 bg-indigo-50 text-indigo-700 rounded text-xs font-medium">
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${isDarkMode ? 'bg-indigo-900 text-indigo-300' : 'bg-indigo-50 text-indigo-700'}`}>
                       {getBatchName(session.batchId)}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-700">{session.subject}</td>
-                  <td className="px-6 py-4 text-sm text-gray-500 flex items-center gap-1">
+                  <td className={`px-6 py-4 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{session.subject}</td>
+                  <td className={`px-6 py-4 text-sm flex items-center gap-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
                     <Clock size={14} /> {session.startTime} - {session.endTime}
                   </td>
                   <td className="px-6 py-4 text-right">
@@ -501,13 +506,13 @@ const Attendance: React.FC = () => {
         <form onSubmit={handleCreateSession} className="space-y-4">
           {!editingSession && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select Batches * <span className="text-xs text-gray-500">({createForm.batchIds.length} selected)</span>
+              <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                Select Batches * <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>({createForm.batchIds.length} selected)</span>
               </label>
               {batches.length > 0 ? (
-                <div className="max-h-48 overflow-y-auto border border-gray-300 rounded-lg p-3 space-y-2">
+                <div className={`max-h-48 overflow-y-auto border rounded-lg p-3 space-y-2 ${isDarkMode ? 'border-gray-600 bg-gray-700' : 'border-gray-300'}`}>
                   {batches.map(batch => (
-                    <label key={batch.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer">
+                    <label key={batch.id} className={`flex items-center gap-3 p-2 rounded cursor-pointer ${isDarkMode ? 'hover:bg-gray-600' : 'hover:bg-gray-50'}`}>
                       <input
                         type="checkbox"
                         checked={createForm.batchIds.includes(batch.id)}
@@ -528,27 +533,27 @@ const Attendance: React.FC = () => {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Subject *</label>
-            <input required type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none bg-white text-gray-900" value={createForm.subject} onChange={e => setCreateForm({...createForm, subject: e.target.value})} placeholder="e.g. Mathematics" />
+            <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Subject *</label>
+            <input required type="text" className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} value={createForm.subject} onChange={e => setCreateForm({...createForm, subject: e.target.value})} placeholder="e.g. Mathematics" />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Topic</label>
-            <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none bg-white text-gray-900" value={createForm.topic} onChange={e => setCreateForm({...createForm, topic: e.target.value})} placeholder="e.g. Quadratic Equations" />
+            <input type="text" className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} value={createForm.topic} onChange={e => setCreateForm({...createForm, topic: e.target.value})} placeholder="e.g. Quadratic Equations" />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
-            <input required type="date" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none bg-white text-gray-900" value={createForm.date} onChange={e => setCreateForm({...createForm, date: e.target.value})} />
+            <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Date *</label>
+            <input required type="date" className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} value={createForm.date} onChange={e => setCreateForm({...createForm, date: e.target.value})} />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Start Time *</label>
-              <input required type="time" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none bg-white text-gray-900" value={createForm.startTime} onChange={e => setCreateForm({...createForm, startTime: e.target.value})} />
+              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Start Time *</label>
+              <input required type="time" className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} value={createForm.startTime} onChange={e => setCreateForm({...createForm, startTime: e.target.value})} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">End Time *</label>
-              <input required type="time" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none bg-white text-gray-900" value={createForm.endTime} onChange={e => setCreateForm({...createForm, endTime: e.target.value})} />
+              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>End Time *</label>
+              <input required type="time" className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} value={createForm.endTime} onChange={e => setCreateForm({...createForm, endTime: e.target.value})} />
             </div>
           </div>
           <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
@@ -641,7 +646,7 @@ const Attendance: React.FC = () => {
                             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
                               attendanceData[student.id] === 'present'
                                 ? 'bg-green-600 text-white'
-                                : 'bg-white text-green-600 border border-green-300 hover:bg-green-50'
+                                : isDarkMode ? 'bg-gray-700 text-green-400 border border-green-700 hover:bg-gray-600' : 'bg-white text-green-600 border border-green-300 hover:bg-green-50'
                             }`}
                           >
                             <CheckCircle className="w-4 h-4" />
@@ -652,7 +657,7 @@ const Attendance: React.FC = () => {
                             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
                               attendanceData[student.id] === 'absent'
                                 ? 'bg-red-600 text-white'
-                                : 'bg-white text-red-600 border border-red-300 hover:bg-red-50'
+                                : isDarkMode ? 'bg-gray-700 text-red-400 border border-red-700 hover:bg-gray-600' : 'bg-white text-red-600 border border-red-300 hover:bg-red-50'
                             }`}
                           >
                             <XCircle className="w-4 h-4" />
@@ -663,7 +668,7 @@ const Attendance: React.FC = () => {
                             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
                               attendanceData[student.id] === 'late'
                                 ? 'bg-yellow-600 text-white'
-                                : 'bg-white text-yellow-600 border border-yellow-300 hover:bg-yellow-50'
+                                : isDarkMode ? 'bg-gray-700 text-yellow-400 border border-yellow-700 hover:bg-gray-600' : 'bg-white text-yellow-600 border border-yellow-300 hover:bg-yellow-50'
                             }`}
                           >
                             <AlertCircle className="w-4 h-4" />

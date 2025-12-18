@@ -31,6 +31,14 @@ export interface Student {
   parentProfession?: string;
   parentCompanyName?: string;
   parentDesignation?: string;
+  assignedTeachers?: AssignedTeacher[];
+}
+
+export interface AssignedTeacher {
+  teacherId: string;
+  teacherName: string;
+  subjects?: string[];
+  assignedAt?: string;
 }
 
 export interface Teacher {
@@ -51,6 +59,16 @@ export interface Batch {
   studentIds: string[];
   maxStudents?: number;
   description?: string;
+  teacherId?: string;
+  teacherName?: string;
+  schedule?: BatchSchedule;
+}
+
+export interface BatchSchedule {
+  dayOfWeek: string;
+  startTime: string;
+  endTime: string;
+  room?: string;
 }
 
 export interface Test {
@@ -235,4 +253,155 @@ export interface Message {
   expiresAt?: string;
   isActive: boolean;
   readBy?: string[];
+}
+
+// New types for enhanced features
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: 'homework' | 'test' | 'fee' | 'message' | 'attendance' | 'announcement' | 'leave' | 'result';
+  title: string;
+  message: string;
+  entityType?: string;
+  entityId?: string;
+  isRead: boolean;
+  createdAt: string | { _seconds: number; _nanoseconds: number };
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  actionUrl?: string;
+}
+
+export interface Schedule {
+  id: string;
+  batchId: string;
+  batchName?: string;
+  teacherId: string;
+  teacherName?: string;
+  subject: string;
+  dayOfWeek: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
+  startTime: string;
+  endTime: string;
+  room?: string;
+  recurring: boolean;
+  createdAt?: any;
+}
+
+export interface Leave {
+  id: string;
+  studentId: string;
+  studentName?: string;
+  startDate: string;
+  endDate: string;
+  reason: string;
+  status: 'pending' | 'approved' | 'rejected';
+  appliedBy: 'student' | 'parent';
+  appliedAt: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  remarks?: string;
+  supportingDocument?: string;
+}
+
+export interface DiscussionThread {
+  id: string;
+  batchId: string;
+  subject: string;
+  title: string;
+  content: string;
+  createdBy: string;
+  createdByName: string;
+  createdByRole: 'student' | 'teacher';
+  createdAt: string;
+  status: 'open' | 'resolved';
+  tags: string[];
+  replyCount: number;
+  viewCount: number;
+  attachments?: string[];
+}
+
+export interface DiscussionReply {
+  id: string;
+  threadId: string;
+  content: string;
+  createdBy: string;
+  createdByName: string;
+  createdByRole: 'student' | 'teacher';
+  createdAt: string;
+  likes: number;
+  attachments?: string[];
+}
+
+export interface Material {
+  id: string;
+  title: string;
+  subject: string;
+  board: string;
+  standard: number;
+  chapter?: string;
+  topic?: string;
+  type: 'notes' | 'question_bank' | 'solutions' | 'video';
+  fileUrl: string;
+  fileType: string;
+  tags: string[];
+  description?: string;
+  uploadedBy: string;
+  uploadedByName?: string;
+  uploadedAt: string;
+  downloadCount?: number;
+  viewCount?: number;
+  accessControl?: {
+    type: 'all' | 'batch' | 'student';
+    batchIds?: string[];
+    studentIds?: string[];
+  };
+}
+
+export interface ProgressReport {
+  studentId: string;
+  studentName: string;
+  board: string;
+  standard: number;
+  period: {
+    startDate: string;
+    endDate: string;
+  };
+  attendance: {
+    totalDays: number;
+    present: number;
+    absent: number;
+    late: number;
+    percentage: number;
+    trend: 'improving' | 'declining' | 'stable';
+  };
+  academicPerformance: {
+    tests: Array<{
+      subject: string;
+      totalTests: number;
+      average: number;
+      best: number;
+      worst: number;
+      trend: 'improving' | 'declining' | 'stable';
+    }>;
+    overallAverage: number;
+  };
+  homework: {
+    assigned: number;
+    completed: number;
+    completionRate: number;
+    onTimeSubmission: number;
+  };
+  strengths: string[];
+  needsImprovement: string[];
+  teacherRemarks?: string;
+}
+
+export interface FeeInstallment {
+  installmentNumber: number;
+  amount: number;
+  dueDate: string;
+  status: 'paid' | 'pending' | 'overdue';
+  paidAmount?: number;
+  paidDate?: string;
+  lateFee?: number;
+  description?: string;
 }

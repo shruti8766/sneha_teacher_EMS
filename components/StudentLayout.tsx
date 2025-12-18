@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import SearchBar from './SearchBar';
 import { 
   LayoutDashboard, 
   BookOpen, 
@@ -22,16 +23,16 @@ const SidebarLink = ({ to, icon: Icon, label, onClick, isCollapsed }: any) => (
     to={to}
     onClick={onClick}
     className={({ isActive }) =>
-      `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+      `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 flex-shrink-0 ${
         isActive
           ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-md'
           : 'text-gray-600 hover:bg-gray-100'
-      } ${isCollapsed ? 'justify-center' : ''}`
+      } ${isCollapsed ? 'justify-center px-2' : ''}`
     }
     title={isCollapsed ? label : ''}
   >
-    <Icon size={20} />
-    {!isCollapsed && <span className="font-medium">{label}</span>}
+    <Icon size={20} className="flex-shrink-0" />
+    {!isCollapsed && <span className="font-medium truncate">{label}</span>}
   </NavLink>
 );
 
@@ -94,10 +95,21 @@ const StudentLayout: React.FC = () => {
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto p-4 space-y-1">
+          {/* Main Navigation Group */}
           <SidebarLink to="/student/dashboard" icon={LayoutDashboard} label="Dashboard" onClick={closeMenu} isCollapsed={isCollapsed} />
+          
+          {/* Divider */}
+          <div className="my-2 mx-2 h-px bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200"></div>
+          
+          {/* Academic Group */}
           <SidebarLink to="/student/homework" icon={BookOpen} label="My Homework" onClick={closeMenu} isCollapsed={isCollapsed} />
           <SidebarLink to="/student/tests" icon={ClipboardList} label="Tests & Results" onClick={closeMenu} isCollapsed={isCollapsed} />
           <SidebarLink to="/student/attendance" icon={CalendarCheck} label="Attendance" onClick={closeMenu} isCollapsed={isCollapsed} />
+          
+          {/* Divider */}
+          <div className="my-2 mx-2 h-px bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200"></div>
+          
+          {/* Finance & Communication Group */}
           <SidebarLink to="/student/fees" icon={CreditCard} label="Fee Details" onClick={closeMenu} isCollapsed={isCollapsed} />
           <SidebarLink to="/student/messages" icon={MessageSquare} label="Messages" onClick={closeMenu} isCollapsed={isCollapsed} />
           <SidebarLink to="/student/profile" icon={User} label="My Profile" onClick={closeMenu} isCollapsed={isCollapsed} />
@@ -125,11 +137,17 @@ const StudentLayout: React.FC = () => {
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
         {/* Mobile Header */}
-        <header className="md:hidden bg-white border-b border-gray-200 p-4 flex items-center justify-between">
-          <div className="font-semibold text-gray-800">
+        <header className="bg-white border-b border-gray-200 p-4 flex items-center justify-between gap-4">
+          <div className="font-semibold text-gray-800 capitalize md:hidden">
             {getPageTitle()}
           </div>
-          <button onClick={toggleMenu} className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg">
+          
+          {/* Search Bar - Hidden on mobile, visible on tablet+ */}
+          <div className="hidden sm:block flex-1 max-w-md">
+            <SearchBar />
+          </div>
+          
+          <button onClick={toggleMenu} className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg">
             <Menu size={24} />
           </button>
         </header>

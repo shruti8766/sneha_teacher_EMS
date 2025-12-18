@@ -1,11 +1,11 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { ApiListResponse, Teacher } from '../types';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
-import { Loader2, Mail, Phone, Plus, Trash2 } from 'lucide-react';
+import { useDarkMode } from '../context/DarkModeContext';
+import { Loader2, Mail, Phone, Plus, Trash2, GraduationCap } from 'lucide-react';
 import Modal from '../components/Modal';
 
 const Teachers: React.FC = () => {
@@ -13,6 +13,7 @@ const Teachers: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const { showToast } = useToast();
   const { user } = useAuth();
+  const { isDarkMode } = useDarkMode();
   const navigate = useNavigate();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -103,9 +104,12 @@ const Teachers: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 min-h-screen px-4 md:px-8 py-6 ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-800">Teachers</h1>
+        <h1 className={`text-3xl font-bold flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+          <GraduationCap className="text-green-600" size={36} />
+          Teachers
+        </h1>
         {user?.role === 'admin' && (
           <button
             onClick={() => setIsModalOpen(true)}
@@ -116,25 +120,25 @@ const Teachers: React.FC = () => {
         )}
       </div>
       
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className={`rounded-xl shadow-sm border overflow-hidden ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
         {loading ? (
           <div className="p-8 flex justify-center"><Loader2 className="animate-spin text-blue-600" /></div>
         ) : (
           <table className="w-full text-left">
-            <thead className="bg-gray-50 border-b border-gray-100">
+            <thead className={`border-b ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-100'}`}>
               <tr>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Name</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Subjects</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Contact</th>
-                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Action</th>
+                <th className={`px-6 py-4 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Name</th>
+                <th className={`px-6 py-4 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Subjects</th>
+                <th className={`px-6 py-4 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Contact</th>
+                <th className={`px-6 py-4 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className={`divide-y ${isDarkMode ? 'divide-gray-700' : 'divide-gray-100'}`}>
               {teachers.map(teacher => (
                 <tr
                   key={teacher.id}
                   onClick={() => navigate(`/teachers/${teacher.id}`)}
-                  className="hover:bg-gray-50 cursor-pointer transition"
+                  className={`transition cursor-pointer ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}
                 >
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
@@ -142,19 +146,19 @@ const Teachers: React.FC = () => {
                         {teacher.name.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <div className="font-medium text-gray-900">{teacher.name}</div>
-                        <div className="text-xs text-gray-500">ID: {teacher.id}</div>
+                        <div className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{teacher.name}</div>
+                        <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>ID: {teacher.id}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-wrap gap-1">
                       {teacher.subjects?.map(s => (
-                        <span key={s} className="px-2 py-0.5 bg-green-50 text-green-700 rounded text-xs">{s}</span>
+                        <span key={s} className={`px-2 py-0.5 rounded text-xs ${isDarkMode ? 'bg-green-900 text-green-300' : 'bg-green-50 text-green-700'}`}>{s}</span>
                       ))}
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
+                  <td className={`px-6 py-4 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-2"><Mail size={14}/> {teacher.email}</div>
                       {teacher.phone && <div className="flex items-center gap-2"><Phone size={14}/> {teacher.phone}</div>}

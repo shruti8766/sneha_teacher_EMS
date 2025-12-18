@@ -1,6 +1,8 @@
 import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { DarkModeProvider } from './context/DarkModeContext';
+import { DetailProvider } from './context/DetailContext';
 import { ToastProvider } from './context/ToastContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -12,6 +14,8 @@ import Fees from './pages/Fees';
 import Attendance from './pages/Attendance';
 import AttendanceDetail from './pages/AttendanceDetail';
 import Tests from './pages/Tests';
+import TestResults from './pages/TestResults';
+import Timetable from './pages/Timetable';
 import Analytics from './pages/Analytics';
 import Messages from './pages/Messages';
 import Materials from './pages/Materials';
@@ -28,13 +32,24 @@ import StudentFees from './Students_Dashboard/StudentFees';
 import StudentMessages from './Students_Dashboard/StudentMessages';
 import StudentMaterials from './Students_Dashboard/StudentMaterials';
 import StudentProfile from './Students_Dashboard/StudentProfile';
+import Profile from './pages/Profile';
+import Settings from './pages/Settings';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
+  
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+      </div>
+    );
+  }
+  
   return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
 };
 
@@ -52,8 +67,10 @@ const App: React.FC = () => {
   return (
     <ToastProvider>
       <AuthProvider>
-        <HashRouter>
-          <Routes>
+        <DarkModeProvider>
+          <DetailProvider>
+            <HashRouter>
+            <Routes>
             <Route path="/login" element={<Login />} />
             
             {/* Role-based redirect */}
@@ -78,12 +95,16 @@ const App: React.FC = () => {
               <Route path="attendance" element={<Attendance />} />
               <Route path="attendance/:sessionId" element={<AttendanceDetail />} />
               <Route path="tests" element={<Tests />} />
+              <Route path="tests/:testId/results" element={<TestResults />} />
+              <Route path="timetable" element={<Timetable />} />
               <Route path="analytics" element={<Analytics />} />
               <Route path="messages" element={<Messages />} />
               <Route path="materials" element={<Materials />} />
               <Route path="students/:id" element={<StudentDetail />} />
               <Route path="teachers/:id" element={<TeachersDetail />} />
               <Route path="batches/:id" element={<BatchDetail />} />
+              <Route path="profile" element={<Profile />} />
+              <Route path="settings" element={<Settings />} />
             </Route>
             
             {/* Student Routes with StudentLayout */}
@@ -109,7 +130,9 @@ const App: React.FC = () => {
               </ProtectedRoute>
             } />
           </Routes>
-        </HashRouter>
+          </HashRouter>
+          </DetailProvider>
+        </DarkModeProvider>
       </AuthProvider>
     </ToastProvider>
   );
