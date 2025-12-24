@@ -1,14 +1,17 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { api } from '../services/api';
-import { Notification, ApiListResponse } from '../types';
+import { Notification, ApiListResponse, Message } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useDarkMode } from '../context/DarkModeContext';
+import { useNavigate } from 'react-router-dom';
 import { Bell, X, Check, BookOpen, ClipboardCheck, DollarSign, MessageSquare, UserCheck, Calendar, AlertCircle } from 'lucide-react';
 
 const NotificationCenter: React.FC = () => {
   const { user } = useAuth();
   const { isDarkMode } = useDarkMode();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -16,9 +19,9 @@ const NotificationCenter: React.FC = () => {
 
   useEffect(() => {
     if (user) {
-      loadNotifications();
+      loadNotificationsAndMessages();
       // Poll for new notifications every 30 seconds
-      const interval = setInterval(loadNotifications, 30000);
+      const interval = setInterval(loadNotificationsAndMessages, 30000);
       return () => clearInterval(interval);
     }
   }, [user]);
@@ -34,51 +37,91 @@ const NotificationCenter: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const loadNotifications = async () => {
+  const loadNotificationsAndMessages = async () => {
     try {
-      const response = await api.get<ApiListResponse<Notification>>('/notifications?limit=20');
-      setNotifications(response.items || []);
-      setUnreadCount(response.items?.filter(n => !n.isRead).length || 0);
+      const [notifRes, msgRes] = await Promise.all([
+        api.get<ApiListResponse<Notification>>('/notifications?limit=20'),
+        api.get<ApiListResponse<Message>>('/messages?limit=20')
+      ]);
+      
+      const notifList = notifRes.items || [];
+      let msgList = msgRes.items || [];
+      
+      // Filter messages that are announcements/new schedules for display
+      msgList = msgList.filter(m => m.type === 'announcement' || m.type === 'notice');
+      
+      setNotifications(notifList);
+      setMessages(msgList);
+      
+      // Count unread items (notifications without isRead flag are unread by default)
+      const unreadNotifs = notifList.filter(n => !n.isRead).length;
+      const unreadMsgs = msgList.filter(m => m.status === 'unread').length;
+      setUnreadCount(unreadNotifs + unreadMsgs);
     } catch (error) {
-      console.error('Failed to load notifications:', error);
-      // Use mock data for development
+      console.error('Failed to load notifications/messages:', error);
       setNotifications([]);
-      setUnreadCount(0);
+      setMessages([]);
     }
   };
 
-  const markAsRead = async (notificationId: string) => {
+  const markAsRead = async (notificationId: string, isMessage: boolean = false) => {
     try {
-      await api.put(`/notifications/${notificationId}/read`, {});
-      setNotifications(prev =>
-        prev.map(n => (n.id === notificationId ? { ...n, isRead: true } : n))
-      );
+      if (isMessage) {
+        await api.post(`/messages/${notificationId}/read`, { userId: user?.uid });
+        setMessages(prev =>
+          prev.map(m => (m.id === notificationId ? { ...m, status: 'read' } : m))
+        );
+      } else {
+        await api.put(`/notifications/${notificationId}/read`, {});
+        setNotifications(prev =>
+          prev.map(n => (n.id === notificationId ? { ...n, isRead: true } : n))
+        );
+      }
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
-      console.error('Failed to mark notification as read:', error);
+      console.error('Failed to mark as read:', error);
     }
   };
 
   const markAllAsRead = async () => {
     try {
-      await api.put('/notifications/mark-all-read', {});
+      await Promise.all([
+        api.put('/notifications/mark-all-read', {}),
+        api.post('/messages/mark-all-read', { userId: user?.uid }).catch(() => {}) // Optional if not implemented
+      ]);
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      setMessages(prev => prev.map(m => ({ ...m, status: 'read' })));
       setUnreadCount(0);
     } catch (error) {
       console.error('Failed to mark all as read:', error);
     }
   };
 
-  const deleteNotification = async (notificationId: string) => {
+  const deleteNotification = async (notificationId: string, isMessage: boolean = false) => {
     try {
-      await api.delete(`/notifications/${notificationId}`);
-      setNotifications(prev => prev.filter(n => n.id !== notificationId));
-      setUnreadCount(prev => {
-        const notif = notifications.find(n => n.id === notificationId);
-        return notif && !notif.isRead ? Math.max(0, prev - 1) : prev;
-      });
+      if (isMessage) {
+        await api.delete(`/messages/${notificationId}`);
+        setMessages(prev => {
+          const updated = prev.filter(m => m.id !== notificationId);
+          const deleted = prev.find(m => m.id === notificationId);
+          if (deleted && deleted.status === 'unread') {
+            setUnreadCount(p => Math.max(0, p - 1));
+          }
+          return updated;
+        });
+      } else {
+        await api.delete(`/notifications/${notificationId}`);
+        setNotifications(prev => {
+          const updated = prev.filter(n => n.id !== notificationId);
+          const deleted = prev.find(n => n.id === notificationId);
+          if (deleted && !deleted.isRead) {
+            setUnreadCount(p => Math.max(0, p - 1));
+          }
+          return updated;
+        });
+      }
     } catch (error) {
-      console.error('Failed to delete notification:', error);
+      console.error('Failed to delete:', error);
     }
   };
 
@@ -218,7 +261,7 @@ const NotificationCenter: React.FC = () => {
         <div className={`p-8 text-center ${
           isDarkMode ? 'text-gray-400' : 'text-gray-500'
         }`}>Loading...</div>
-      ) : notifications.length === 0 ? (
+      ) : (notifications.length === 0 && messages.length === 0) ? (
         <div className="p-8 text-center">
           <Bell size={48} className={`mx-auto mb-3 ${
             isDarkMode ? 'text-gray-700' : 'text-gray-300'
@@ -234,6 +277,90 @@ const NotificationCenter: React.FC = () => {
         <div className={`divide-y ${
           isDarkMode ? 'divide-gray-800' : 'divide-gray-100'
         }`}>
+          {/* Messages Section */}
+          {messages.length > 0 && (
+            <>
+              <div className={`px-4 py-3 text-xs font-bold uppercase tracking-wider ${
+                isDarkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'
+              }`}>
+                📢 Announcements & Messages
+              </div>
+              {messages.map((message) => (
+                <div
+                  key={`msg-${message.id}`}
+                  className={`p-4 transition cursor-pointer ${
+                    isDarkMode 
+                      ? 'hover:bg-gray-800' 
+                      : 'hover:bg-gray-50'
+                  } ${
+                    message.status === 'unread' ? (
+                      isDarkMode 
+                        ? 'bg-blue-900/30 border-l-4 border-l-blue-500' 
+                        : 'bg-blue-50 border-l-4 border-l-blue-500'
+                    ) : ''
+                  }`}
+                  onClick={() => {
+                    if (message.status === 'unread') markAsRead(message.id, true);
+                    setIsOpen(false);
+                    navigate('/messages');
+                  }}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`p-2 rounded-lg border ${
+                      isDarkMode 
+                        ? 'border-blue-700 bg-blue-900/30' 
+                        : 'border-blue-200 bg-blue-50'
+                    }`}>
+                      <MessageSquare size={16} className="text-blue-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <h4 className={`text-sm font-semibold ${
+                          message.status === 'unread' 
+                            ? (isDarkMode ? 'text-gray-100' : 'text-gray-900')
+                            : (isDarkMode ? 'text-gray-300' : 'text-gray-700')
+                        }`}>
+                          {message.title}
+                        </h4>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteNotification(message.id, true);
+                          }}
+                          className={`transition ${
+                            isDarkMode 
+                              ? 'text-gray-500 hover:text-red-400' 
+                              : 'text-gray-400 hover:text-red-600'
+                          }`}
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                      <p className={`text-xs mb-2 line-clamp-2 whitespace-pre-wrap ${
+                        isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                      }`}>
+                        {message.content}
+                      </p>
+                      <span className={`text-xs ${
+                        isDarkMode ? 'text-gray-500' : 'text-gray-500'
+                      }`}>
+                        {new Date(message.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+
+          {/* System Notifications Section */}
+          {notifications.length > 0 && (
+            <>
+              <div className={`px-4 py-3 text-xs font-bold uppercase tracking-wider ${
+                isDarkMode ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'
+              }`}>
+                🔔 System Notifications
+              </div>
           {notifications.map((notification) => (
             <div
               key={notification.id}
@@ -250,9 +377,8 @@ const NotificationCenter: React.FC = () => {
               }`}
               onClick={() => {
                 if (!notification.isRead) markAsRead(notification.id);
-                if (notification.actionUrl) {
-                  window.location.href = notification.actionUrl;
-                }
+                setIsOpen(false);
+                navigate('/messages');
               }}
             >
               <div className="flex items-start gap-3">
@@ -329,15 +455,25 @@ const NotificationCenter: React.FC = () => {
               </div>
             </div>
           ))}
+            </>
+          )}
         </div>
       )}
     </div>
 
           {/* Footer */}
-          {notifications.length > 0 && (
-            <div className="p-3 border-t border-gray-200 bg-gray-50">
-              <button className="w-full text-center text-sm text-blue-600 hover:text-blue-700 font-medium">
-                View All Notifications
+          {(notifications.length > 0 || messages.length > 0) && (
+            <div className={`p-3 border-t ${
+              isDarkMode 
+                ? 'border-gray-700 bg-gray-800' 
+                : 'border-gray-200 bg-gray-50'
+            }`}>
+              <button className={`w-full text-center text-sm font-medium transition ${
+                isDarkMode 
+                  ? 'text-blue-400 hover:text-blue-300' 
+                  : 'text-blue-600 hover:text-blue-700'
+              }`}>
+                View All
               </button>
             </div>
           )}

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { useDarkMode } from '../context/DarkModeContext';
 import { api } from '../services/api';
 import { FileText, Download, Eye, Loader2, Filter } from 'lucide-react';
 
@@ -19,6 +20,7 @@ interface Material {
 const StudentMaterials: React.FC = () => {
   const { user } = useAuth();
   const { showToast } = useToast();
+  const { isDarkMode } = useDarkMode();
   const [materials, setMaterials] = useState<Material[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState('all');
@@ -124,9 +126,9 @@ const StudentMaterials: React.FC = () => {
     <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Study Materials</h1>
+        <h1 className={`text-3xl font-bold mb-2 flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}><FileText size={40} className="text-indigo-600" />Study Materials</h1>
         {studentProfile && (
-          <p className="text-gray-600">
+          <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
             Materials for {studentProfile.board} - Standard {studentProfile.standard}
           </p>
         )}
@@ -140,7 +142,7 @@ const StudentMaterials: React.FC = () => {
             className={`px-4 py-2 rounded-full font-medium transition-colors whitespace-nowrap ${
               filterType === 'all'
                 ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                : isDarkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
           >
             All Materials
@@ -152,7 +154,7 @@ const StudentMaterials: React.FC = () => {
               className={`px-4 py-2 rounded-full font-medium transition-colors whitespace-nowrap ${
                 filterType === type
                   ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  : isDarkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
             >
               {type.toUpperCase()}
@@ -163,17 +165,17 @@ const StudentMaterials: React.FC = () => {
 
       {/* Materials Grid */}
       {filteredMaterials.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg shadow">
-          <FileText className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-          <h3 className="text-xl font-medium text-gray-900 mb-2">No materials found</h3>
-          <p className="text-gray-600">No study materials available for {filterType !== 'all' ? filterType : 'your category'}</p>
+        <div className={`text-center py-12 rounded-lg shadow ${isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white'}`}>
+          <FileText className={`w-16 h-16 mx-auto mb-4 ${isDarkMode ? 'text-gray-600' : 'text-gray-400'}`} />
+          <h3 className={`text-xl font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>No materials found</h3>
+          <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>No study materials available for {filterType !== 'all' ? filterType : 'your category'}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredMaterials.map((material: Material) => (
             <div
               key={material.id}
-              className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow"
+              className={`rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow ${isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white'}`}
             >
               {/* Material Header */}
               <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-4 text-white">
@@ -185,20 +187,20 @@ const StudentMaterials: React.FC = () => {
               {/* Material Body */}
               <div className="p-4">
                 {material.description && (
-                  <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                  <p className={`text-sm mb-3 line-clamp-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                     {material.description}
                   </p>
                 )}
 
-                <div className="space-y-2 mb-4 text-sm">
+                <div className={`space-y-2 mb-4 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Subject:</span>
-                    <span className="font-medium text-gray-900">{material.subject}</span>
+                    <span>Subject:</span>
+                    <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{material.subject}</span>
                   </div>
                   {material.createdAt && (
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Uploaded:</span>
-                      <span className="font-medium text-gray-900">{formatDate(material.createdAt)}</span>
+                      <span>Uploaded:</span>
+                      <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{formatDate(material.createdAt)}</span>
                     </div>
                   )}
                 </div>
@@ -210,14 +212,22 @@ const StudentMaterials: React.FC = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.preventDefault()}
-                    className="flex-1 flex items-center justify-center px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium"
+                    className={`flex-1 flex items-center justify-center px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
+                      isDarkMode
+                        ? 'bg-blue-900/30 text-blue-400 hover:bg-blue-900/50'
+                        : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    }`}
                   >
                     <Eye className="w-4 h-4 mr-1" />
                     View
                   </a>
                   <button
                     onClick={(e) => handleDownload(material, e)}
-                    className="flex-1 flex items-center justify-center px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium"
+                    className={`flex-1 flex items-center justify-center px-3 py-2 rounded-lg transition-colors text-sm font-medium ${
+                      isDarkMode
+                        ? 'bg-green-900/30 text-green-400 hover:bg-green-900/50'
+                        : 'bg-green-100 text-green-700 hover:bg-green-200'
+                    }`}
                   >
                     <Download className="w-4 h-4 mr-1" />
                     Download

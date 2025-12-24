@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DarkModeProvider } from './context/DarkModeContext';
@@ -16,6 +16,8 @@ import AttendanceDetail from './pages/AttendanceDetail';
 import Tests from './pages/Tests';
 import TestResults from './pages/TestResults';
 import Timetable from './pages/Timetable';
+import Meetings from './pages/Meetings';
+import MeetingDetails from './pages/MeetingDetails';
 import Analytics from './pages/Analytics';
 import Messages from './pages/Messages';
 import Materials from './pages/Materials';
@@ -34,13 +36,15 @@ import StudentMaterials from './Students_Dashboard/StudentMaterials';
 import StudentProfile from './Students_Dashboard/StudentProfile';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
+import { pushNotifications } from './services/pushNotifications';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  allowedRoles?: string[];
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles }) => {
+  const { isAuthenticated, isLoading, user } = useAuth();
   
   if (isLoading) {
     return (
@@ -50,7 +54,20 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     );
   }
   
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
+  }
+
+  // Check role-based access
+  if (allowedRoles && !allowedRoles.includes(user?.role || '')) {
+    // Redirect to dashboard (or student dashboard if student)
+    if (user?.role === 'student') {
+      return <Navigate to="/student/dashboard" />;
+    }
+    return <Navigate to="/dashboard" />;
+  }
+  
+  return <>{children}</>;
 };
 
 // Redirect based on user role
@@ -64,6 +81,20 @@ const RoleBasedRedirect: React.FC = () => {
 };
 
 const App: React.FC = () => {
+  // Register service worker on app startup
+  useEffect(() => {
+    const initPushNotifications = async () => {
+      if (pushNotifications.isSupported()) {
+        console.log('📢 Registering service worker for push notifications...');
+        await pushNotifications.registerServiceWorker();
+      } else {
+        console.warn('⚠️ Push notifications not supported in this browser');
+      }
+    };
+
+    initPushNotifications();
+  }, []);
+
   return (
     <ToastProvider>
       <AuthProvider>
@@ -88,23 +119,27 @@ const App: React.FC = () => {
             }>
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="students" element={<Students />} />
-              <Route path="teachers" element={<Teachers />} />
+              <Route path="teachers" element={<ProtectedRoute allowedRoles={['admin']}><Teachers /></ProtectedRoute>} />
               <Route path="batches" element={<Batches />} />
               <Route path="homework" element={<Homework />} />
-              <Route path="fees" element={<Fees />} />
               <Route path="attendance" element={<Attendance />} />
               <Route path="attendance/:sessionId" element={<AttendanceDetail />} />
               <Route path="tests" element={<Tests />} />
               <Route path="tests/:testId/results" element={<TestResults />} />
               <Route path="timetable" element={<Timetable />} />
-              <Route path="analytics" element={<Analytics />} />
+              <Route path="meetings" element={<Meetings />} />
+              <Route path="meetings/:meetingId" element={<MeetingDetails />} />
               <Route path="messages" element={<Messages />} />
               <Route path="materials" element={<Materials />} />
               <Route path="students/:id" element={<StudentDetail />} />
-              <Route path="teachers/:id" element={<TeachersDetail />} />
+              <Route path="teachers/:id" element={<ProtectedRoute allowedRoles={['admin']}><TeachersDetail /></ProtectedRoute>} />
               <Route path="batches/:id" element={<BatchDetail />} />
               <Route path="profile" element={<Profile />} />
-              <Route path="settings" element={<Settings />} />
+              
+              {/* Admin-only routes */}
+              <Route path="fees" element={<ProtectedRoute allowedRoles={['admin']}><Fees /></ProtectedRoute>} />
+              <Route path="analytics" element={<ProtectedRoute allowedRoles={['admin']}><Analytics /></ProtectedRoute>} />
+              <Route path="settings" element={<ProtectedRoute allowedRoles={['admin']}><Settings /></ProtectedRoute>} />
             </Route>
             
             {/* Student Routes with StudentLayout */}

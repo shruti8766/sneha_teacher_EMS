@@ -27,7 +27,8 @@ import {
   Calendar as CalendarIcon,
   Moon,
   Sun,
-  ArrowLeft
+  ArrowLeft,
+  Video
 } from 'lucide-react';
 
 const SidebarLink = ({ to, icon: Icon, label, onClick, isCollapsed, isDarkMode, showDetail, detailName }: any) => (
@@ -157,7 +158,9 @@ const Layout: React.FC = () => {
           {!isCollapsed && <div className={`text-xs font-bold uppercase tracking-widest px-2 py-2 mt-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>Core</div>}
           <SidebarLink to="/dashboard" icon={LayoutDashboard} label="Dashboard" onClick={closeMenu} isCollapsed={isCollapsed} isDarkMode={isDarkMode} />
           <SidebarLink to="/students" icon={Users} label="Students" onClick={closeMenu} isCollapsed={isCollapsed} isDarkMode={isDarkMode} showDetail={isStudentDetail} detailName={detailName} />
-          <SidebarLink to="/teachers" icon={GraduationCap} label="Teachers" onClick={closeMenu} isCollapsed={isCollapsed} isDarkMode={isDarkMode} showDetail={isTeacherDetail} detailName={detailName} />
+          {user?.role !== 'teacher' && (
+            <SidebarLink to="/teachers" icon={GraduationCap} label="Teachers" onClick={closeMenu} isCollapsed={isCollapsed} isDarkMode={isDarkMode} showDetail={isTeacherDetail} detailName={detailName} />
+          )}
           
           {/* Divider */}
           <div className={`my-3 mx-2 h-px bg-gradient-to-r ${isDarkMode ? 'from-gray-700 via-gray-600 to-gray-700' : 'from-gray-200 via-gray-300 to-gray-200'}`}></div>
@@ -167,18 +170,29 @@ const Layout: React.FC = () => {
           <SidebarLink to="/batches" icon={BookOpen} label="Batches" onClick={closeMenu} isCollapsed={isCollapsed} isDarkMode={isDarkMode} showDetail={isBatchDetail} detailName={detailName} />
           <SidebarLink to="/attendance" icon={CalendarCheck} label="Attendance" onClick={closeMenu} isCollapsed={isCollapsed} isDarkMode={isDarkMode} />
           <SidebarLink to="/timetable" icon={CalendarIcon} label="Timetable" onClick={closeMenu} isCollapsed={isCollapsed} isDarkMode={isDarkMode} />
+          <SidebarLink to="/meetings" icon={Video} label="Meetings" onClick={closeMenu} isCollapsed={isCollapsed} isDarkMode={isDarkMode} />
           <SidebarLink to="/materials" icon={BookText} label="Syllabus" onClick={closeMenu} isCollapsed={isCollapsed} isDarkMode={isDarkMode} />
           <SidebarLink to="/homework" icon={PenTool} label="Homework" onClick={closeMenu} isCollapsed={isCollapsed} isDarkMode={isDarkMode} />
           <SidebarLink to="/tests" icon={ClipboardList} label="Tests" onClick={closeMenu} isCollapsed={isCollapsed} isDarkMode={isDarkMode} />
           
-          {/* Divider */}
-          <div className={`my-3 mx-2 h-px bg-gradient-to-r ${isDarkMode ? 'from-gray-700 via-gray-600 to-gray-700' : 'from-gray-200 via-gray-300 to-gray-200'}`}></div>
+          {/* Divider - Only show for admin/staff */}
+          {user?.role !== 'teacher' && (
+            <div className={`my-3 mx-2 h-px bg-gradient-to-r ${isDarkMode ? 'from-gray-700 via-gray-600 to-gray-700' : 'from-gray-200 via-gray-300 to-gray-200'}`}></div>
+          )}
           
-          {/* Finance & Communication Group */}
-          {!isCollapsed && <div className={`text-xs font-bold uppercase tracking-widest px-2 py-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>Operations</div>}
-          <SidebarLink to="/fees" icon={CreditCard} label="Fees" onClick={closeMenu} isCollapsed={isCollapsed} isDarkMode={isDarkMode} />
-          <SidebarLink to="/messages" icon={MessageSquare} label="Messages" onClick={closeMenu} isCollapsed={isCollapsed} isDarkMode={isDarkMode} />
-          <SidebarLink to="/analytics" icon={BarChart3} label="Analytics" onClick={closeMenu} isCollapsed={isCollapsed} isDarkMode={isDarkMode} />
+          {/* Finance & Communication Group - Only show for admin/staff */}
+          {user?.role !== 'teacher' && (
+            <>
+              {!isCollapsed && <div className={`text-xs font-bold uppercase tracking-widest px-2 py-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>Operations</div>}
+              <SidebarLink to="/fees" icon={CreditCard} label="Fees" onClick={closeMenu} isCollapsed={isCollapsed} isDarkMode={isDarkMode} />
+              <SidebarLink to="/analytics" icon={BarChart3} label="Analytics" onClick={closeMenu} isCollapsed={isCollapsed} isDarkMode={isDarkMode} />
+            </>
+          )}
+          
+          {/* Messages - Available for all roles */}
+          {(user?.role !== 'teacher' || user?.role === 'teacher') && (
+            <SidebarLink to="/messages" icon={MessageSquare} label="Messages" onClick={closeMenu} isCollapsed={isCollapsed} isDarkMode={isDarkMode} />
+          )}
           
           {/* Empty space for future pages */}
           <div className="flex-1"></div>
@@ -244,7 +258,9 @@ const Layout: React.FC = () => {
           <div className={`flex items-center gap-4 ml-auto`}>
             {/* Dark Mode Toggle */}
             <DarkModeToggle />
+            <span className={`h-6 w-px mx-2 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`}></span>
             <UserProfileCard />
+            <span className={`h-6 w-px mx-2 ${isDarkMode ? 'bg-gray-600' : 'bg-gray-300'}`}></span>
             <NotificationCenter />
             <button onClick={toggleMenu} className={`md:hidden p-2 rounded-lg transition-colors duration-300 ${isDarkMode ? 'text-gray-400 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-100'}`}>
               <Menu size={24} />

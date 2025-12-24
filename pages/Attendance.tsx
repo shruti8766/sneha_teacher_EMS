@@ -400,18 +400,18 @@ const Attendance: React.FC = () => {
   };
 
   return (
-    <div className={`space-y-6 min-h-screen px-4 md:px-8 py-6 ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
+    <div className={`space-y-4 min-h-screen px-3 md:px-6 py-4 ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
       <div className="flex items-center justify-between">
-        <h1 className={`text-3xl font-bold flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-          <CalendarCheck className="text-yellow-600" size={36} />
+        <h1 className={`text-2xl font-bold flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+          <CalendarCheck className="text-yellow-600" size={28} />
           Attendance
         </h1>
         {(user?.role === 'admin' || user?.role === 'teacher') && (
           <button
             onClick={() => setIsCreateModalOpen(true)}
-            className="bg-indigo-600 text-white px-6 py-2.5 rounded-lg hover:bg-indigo-700 transition flex items-center gap-2 font-medium shadow-sm"
+            className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center gap-1.5 font-medium shadow-sm text-sm"
           >
-            <Plus size={20} /> Create Session
+            <Plus size={18} /> Create Session
           </button>
         )}
       </div>
@@ -421,48 +421,48 @@ const Attendance: React.FC = () => {
       ) : sessions.length === 0 ? (
         <div className={`text-center p-8 rounded-xl border ${isDarkMode ? 'text-gray-400 bg-gray-800 border-gray-700' : 'text-gray-500 bg-white border-gray-100'}`}>No attendance sessions found.</div>
       ) : (
-        <div className={`rounded-xl shadow-sm border overflow-hidden ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
+        <div className={`rounded-lg shadow-sm border overflow-hidden ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
           <table className="w-full text-left">
             <thead className={`border-b ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-100'}`}>
               <tr>
-                <th className={`px-6 py-4 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Created</th>
-                <th className={`px-6 py-4 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Batch</th>
-                <th className={`px-6 py-4 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Subject</th>
-                <th className={`px-6 py-4 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Time</th>
-                <th className={`px-6 py-4 text-xs font-semibold uppercase text-right ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Actions</th>
+                <th className={`px-4 py-2.5 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Created</th>
+                <th className={`px-4 py-2.5 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Batch</th>
+                <th className={`px-4 py-2.5 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Subject</th>
+                <th className={`px-4 py-2.5 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Time</th>
+                <th className={`px-4 py-2.5 text-xs font-semibold uppercase text-right ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Actions</th>
               </tr>
             </thead>
             <tbody className={`divide-y ${isDarkMode ? 'divide-gray-700' : 'divide-gray-100'}`}>
               {sessions.map(session => (
                 <tr key={session.id} className={isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-3">
                     <div className="flex flex-col">
-                      <div className={`flex items-center gap-2 font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}>
-                        <Calendar size={16} className={isDarkMode ? 'text-gray-500' : 'text-gray-400'} />
+                      <div className={`flex items-center gap-1.5 text-sm font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}>
+                        <Calendar size={14} className={isDarkMode ? 'text-gray-500' : 'text-gray-400'} />
                         {new Date(session.date).toLocaleDateString()}
                       </div>
-                      <span className={`text-xs ml-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Session for all dates</span>
+                      <span className={`text-xs ml-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Session for all dates</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${isDarkMode ? 'bg-indigo-900 text-indigo-300' : 'bg-indigo-50 text-indigo-700'}`}>
+                  <td className="px-4 py-3">
+                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${isDarkMode ? 'bg-indigo-900 text-indigo-300' : 'bg-indigo-50 text-indigo-700'}`}>
                       {getBatchName(session.batchId)}
                     </span>
                   </td>
-                  <td className={`px-6 py-4 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{session.subject}</td>
-                  <td className={`px-6 py-4 text-sm flex items-center gap-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                    <Clock size={14} /> {session.startTime} - {session.endTime}
+                  <td className={`px-4 py-3 text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{session.subject}</td>
+                  <td className={`px-4 py-3 text-xs flex items-center gap-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                    <Clock size={12} /> {session.startTime} - {session.endTime}
                   </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-3">
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-2">
                       {(user?.role === 'admin' || user?.role === 'teacher') && (
                         <>
                           <button
                             onClick={() => navigate(`/attendance/${session.id}`)}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition text-sm font-medium"
+                            className="flex items-center gap-1 px-2 py-1 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition text-xs font-medium"
                             title="Manage Daily Attendance"
                           >
-                            <List size={14} />
+                            <List size={12} />
                             Manage
                           </button>
                           <button
@@ -470,14 +470,14 @@ const Attendance: React.FC = () => {
                             className="text-indigo-600 hover:text-indigo-800 transition"
                             title="Edit Session"
                           >
-                            <Edit2 size={16} />
+                            <Edit2 size={14} />
                           </button>
                           <button
                             onClick={() => handleDeleteSession(session)}
                             className="text-red-600 hover:text-red-800 transition"
                             title="Delete Session"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={14} />
                           </button>
                         </>
                       )}
@@ -502,7 +502,7 @@ const Attendance: React.FC = () => {
           endTime: '10:00',
           topic: ''
         });
-      }} title={editingSession ? "Edit Attendance Session" : "Create Attendance Session"}>
+      }} title={editingSession ? "Edit Attendance Session" : "Create Attendance Session"} isDarkMode={isDarkMode}>
         <form onSubmit={handleCreateSession} className="space-y-4">
           {!editingSession && (
             <div>

@@ -6,33 +6,91 @@ import { ApiListResponse, Student, Teacher, Test, Batch, ActivityLog } from '../
 import { Users, GraduationCap, ClipboardList, BookOpen, Loader2, Shield, User, Clock, CheckCircle, AlertCircle, FileText, BarChart3, TrendingUp, Activity, Target, Zap } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+// Custom Pie Chart Component
+const SimplePieChart = ({ present, absent, isDarkMode }: { present: number; absent: number; isDarkMode: boolean }) => {
+  const total = present + absent;
+  const presentPercentage = total > 0 ? (present / total) * 100 : 0;
+  const absentPercentage = total > 0 ? (absent / total) * 100 : 0;
+  
+  const circumference = 2 * Math.PI * 40;
+  const presentOffset = circumference - (presentPercentage / 100) * circumference;
+  
+  return (
+    <div className="flex flex-col items-center justify-center">
+      <div className="relative">
+        <svg width="140" height="140" viewBox="0 0 140 140" className="transform -rotate-90">
+          <circle
+            cx="70"
+            cy="70"
+            r="40"
+            fill="none"
+            stroke={isDarkMode ? '#374151' : '#e5e7eb'}
+            strokeWidth="6"
+          />
+          <circle
+            cx="70"
+            cy="70"
+            r="40"
+            fill="none"
+            stroke="#10b981"
+            strokeWidth="6"
+            strokeDasharray={circumference}
+            strokeDashoffset={presentOffset}
+            strokeLinecap="round"
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <div className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            {presentPercentage.toFixed(0)}%
+          </div>
+          <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            Present
+          </div>
+        </div>
+      </div>
+      <div className="flex gap-4 mt-3">
+        <div className="text-center">
+          <div className="w-2 h-2 bg-green-500 rounded-full mx-auto mb-1"></div>
+          <div className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{present}</div>
+          <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Present</div>
+        </div>
+        <div className="text-center">
+          <div className={`w-2 h-2 rounded-full mx-auto mb-1 ${isDarkMode ? 'bg-red-600' : 'bg-red-400'}`}></div>
+          <div className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{absent}</div>
+          <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Absent</div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const MetricBox = ({ value, label, subtext, color, isDarkMode }: any) => (
   <div className="text-center">
-    <div className={`text-4xl font-bold ${color} mb-2`}>{value}</div>
-    <div className={`text-sm font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{label}</div>
-    <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mt-1`}>{subtext}</div>
+    <div className={`text-2xl font-bold ${color} mb-1`}>{value}</div>
+    <div className={`text-xs font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>{label}</div>
+    <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mt-0.5`}>{subtext}</div>
   </div>
 );
 
 const InsightCard = ({ icon: Icon, title, value, metric, color, description, isDarkMode }: any) => (
-  <div className={`rounded-xl p-6 border shadow-sm hover:shadow-md transition ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
-    <div className="flex items-start justify-between mb-4">
-      <div className="flex items-center gap-3">
-        <div className={`p-3 rounded-lg ${color}`}>
-          <Icon size={24} className="text-white" />
+  <div className={`rounded-lg p-4 border shadow-sm hover:shadow-md transition ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
+    <div className="flex items-start justify-between mb-3">
+      <div className="flex items-center gap-2">
+        <div className={`p-2 rounded-lg ${color}`}>
+          <Icon size={18} className="text-white" />
         </div>
         <div>
-          <h3 className={`font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>{title}</h3>
-          <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mt-1`}>{description}</p>
+          <h3 className={`text-sm font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>{title}</h3>
+          <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mt-0.5`}>{description}</p>
         </div>
       </div>
     </div>
     <div className="flex items-end justify-between">
       <div>
-        <div className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{value}</div>
-        <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mt-1`}>{metric}</div>
+        <div className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{value}</div>
+        <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mt-0.5`}>{metric}</div>
       </div>
-      <TrendingUp size={20} className="text-green-500" />
+      <TrendingUp size={16} className="text-green-500" />
     </div>
   </div>
 );
@@ -73,17 +131,17 @@ const ActivityItem: React.FC<{ log: ActivityLog; isDarkMode: boolean }> = ({ log
   }
 
   return (
-    <div className={`flex items-start gap-4 p-4 border-b transition ${isDarkMode ? 'hover:bg-gray-700 border-gray-700' : 'hover:bg-gray-50 border-gray-100'} last:border-0`}>
-      <div className={`p-2.5 rounded-lg ${color} flex-shrink-0 mt-0.5`}>
-        <Icon size={18} />
+    <div className={`flex items-start gap-3 p-3 border-b transition ${isDarkMode ? 'hover:bg-gray-700 border-gray-700' : 'hover:bg-gray-50 border-gray-100'} last:border-0`}>
+      <div className={`p-2 rounded-lg ${color} flex-shrink-0 mt-0.5`}>
+        <Icon size={16} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className={`text-sm font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+        <p className={`text-xs font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>
           <span className="capitalize">{log.action.replace('_', ' ')}</span>
         </p>
-        <p className={`text-sm mt-0.5 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{log.entityName || 'Unknown Item'}</p>
-        <div className="flex items-center gap-2 mt-2">
-          <Clock size={12} className={`flex-shrink-0 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`} />
+        <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{log.entityName || 'Unknown Item'}</p>
+        <div className="flex items-center gap-1.5 mt-1.5">
+          <Clock size={10} className={`flex-shrink-0 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`} />
           <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>{dateStr}</span>
         </div>
       </div>
@@ -104,6 +162,10 @@ const Dashboard: React.FC = () => {
     batches: 0
   });
   const [activities, setActivities] = useState<ActivityLog[]>([]);
+  const [attendanceStats, setAttendanceStats] = useState({
+    present: 0,
+    absent: 0
+  });
 
   const isAdmin = user?.role === 'admin';
   const isTeacher = user?.role === 'teacher';
@@ -121,12 +183,31 @@ const Dashboard: React.FC = () => {
         const activeTeachers = teachers.items.filter(t => t.active !== false);
         const activeStudents = students.items.filter(s => s.active !== false).length;
 
+        // Calculate attendance stats
+        let presentCount = 0;
+        let absentCount = 0;
+        students.items.forEach((student: any) => {
+          if (student.attendance) {
+            const attendancePercentage = typeof student.attendance === 'number' ? student.attendance : 0;
+            if (attendancePercentage >= 75) {
+              presentCount++;
+            } else {
+              absentCount++;
+            }
+          }
+        });
+
         setStats({
           students: students.items.length,
           activeStudents: activeStudents,
           teachers: activeTeachers.length,
           tests: tests.items.filter(t => new Date(t.dateTime || '') > new Date()).length,
           batches: batches.items.length,
+        });
+
+        setAttendanceStats({
+          present: presentCount,
+          absent: absentCount
         });
 
         try {
@@ -159,27 +240,27 @@ const Dashboard: React.FC = () => {
     : 0;
 
   return (
-    <div className={`min-h-screen px-4 md:px-8 py-6 ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
-      <div className="space-y-8 max-w-7xl mx-auto">
+    <div className={`min-h-screen px-3 md:px-6 py-4 ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
+      <div className="space-y-4 max-w-7xl mx-auto">
       {/* Professional Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className={`text-4xl font-bold flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-            <BarChart3 className="text-blue-600" size={40} />
+          <h1 className={`text-2xl font-bold flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+            <BarChart3 className="text-blue-600" size={28} />
             Dashboard
           </h1>
-          <p className={`mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Welcome back, <span className={`font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-800'}`}>{user?.name}</span></p>
+          <p className={`mt-1 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Welcome back, <span className={`font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-800'}`}>{user?.name}</span></p>
         </div>
-        <div className={`flex items-center gap-2 px-4 py-2 rounded-full border ${isAdmin ? (isDarkMode ? 'bg-purple-900 border-purple-700 text-purple-300' : 'bg-purple-50 border-purple-200 text-purple-700') : (isDarkMode ? 'bg-blue-900 border-blue-700 text-blue-300' : 'bg-blue-50 border-blue-200 text-blue-700')}`}>
-          {isAdmin ? <Shield size={18} /> : <User size={18} />}
-          <span className="font-medium capitalize">{user?.role}</span>
+        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm ${isAdmin ? (isDarkMode ? 'bg-purple-900 border-purple-700 text-purple-300' : 'bg-purple-50 border-purple-200 text-purple-700') : (isDarkMode ? 'bg-blue-900 border-blue-700 text-blue-300' : 'bg-blue-50 border-blue-200 text-blue-700')}`}>
+          {isAdmin ? <Shield size={14} /> : <User size={14} />}
+          <span className="font-medium capitalize text-xs">{user?.role}</span>
         </div>
       </div>
 
       
 
       {/* Performance Insights */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <InsightCard
           icon={Target}
           title="Engagement Rate"
@@ -209,98 +290,109 @@ const Dashboard: React.FC = () => {
         />
       </div>
 
-      {/* Key Metrics Bar */}
-      <div className={`rounded-xl shadow-sm border p-8 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-          <MetricBox 
-            value={stats.students}
-            label="Total Students"
-            subtext={`${stats.activeStudents} active`}
-            color="text-blue-600"
-            isDarkMode={isDarkMode}
-          />
-          <div className={`h-16 hidden md:block border-r ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}></div>
-          <MetricBox 
-            value={stats.teachers}
-            label="Faculty Members"
-            subtext="Active instructors"
-            color="text-green-600"
-            isDarkMode={isDarkMode}
-          />
-          <div className={`h-16 hidden md:block border-r ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}></div>
-          <MetricBox 
-            value={stats.batches}
-            label="Active Batches"
-            subtext="Running classes"
-            color="text-orange-600"
-            isDarkMode={isDarkMode}
-          />
-          <div className={`h-16 hidden md:block border-r ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}></div>
-          <MetricBox 
-            value={stats.tests}
-            label="Upcoming Tests"
-            subtext="Scheduled assessments"
-            color="text-purple-600"
+      {/* Key Metrics Bar and Attendance Chart */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        {/* Key Metrics - Left Side */}
+        <div className={`lg:col-span-2 rounded-lg shadow-sm border p-4 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
+          <h3 className={`text-sm font-bold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Key Metrics</h3>
+          <div className="grid grid-cols-2 md:grid-cols-2 gap-4">
+            <MetricBox 
+              value={stats.students}
+              label="Total Students"
+              subtext={`${stats.activeStudents} active`}
+              color="text-blue-600"
+              isDarkMode={isDarkMode}
+            />
+            <MetricBox 
+              value={stats.teachers}
+              label="Faculty Members"
+              subtext="Active instructors"
+              color="text-green-600"
+              isDarkMode={isDarkMode}
+            />
+            <MetricBox 
+              value={stats.batches}
+              label="Active Batches"
+              subtext="Running classes"
+              color="text-orange-600"
+              isDarkMode={isDarkMode}
+            />
+            <MetricBox 
+              value={stats.tests}
+              label="Upcoming Tests"
+              subtext="Scheduled assessments"
+              color="text-purple-600"
+              isDarkMode={isDarkMode}
+            />
+          </div>
+        </div>
+
+        {/* Attendance Chart - Right Side */}
+        <div className={`rounded-lg shadow-sm border p-4 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'} flex flex-col items-center justify-center`}>
+          <h3 className={`text-sm font-bold mb-3 w-full ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Student Attendance</h3>
+          <SimplePieChart 
+            present={attendanceStats.present}
+            absent={attendanceStats.absent}
             isDarkMode={isDarkMode}
           />
         </div>
       </div>
 
       {/* Main Content - Activity & Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         {/* Recent Activity - Takes 2 columns on desktop */}
-        <div className={`lg:col-span-2 rounded-xl shadow-sm border overflow-hidden ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
-          <div className={`p-6 border-b ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gradient-to-r from-gray-50 to-white border-gray-100'}`}>
-            <div className="flex items-center gap-3">
-              <Activity className="text-blue-600" size={24} />
+        <div className={`lg:col-span-2 rounded-lg shadow-sm border overflow-hidden ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
+          <div className={`p-4 border-b ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gradient-to-r from-gray-50 to-white border-gray-100'}`}>
+            <div className="flex items-center gap-2">
+              <Activity className="text-blue-600" size={18} />
               <div>
-                <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Recent Activity</h2>
-                <p className={`text-sm mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Latest updates from your institution</p>
+                <h2 className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Recent Activity</h2>
+                <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Latest updates from your institution</p>
               </div>
             </div>
           </div>
-          <div className={`divide-y max-h-96 overflow-y-auto ${isDarkMode ? 'divide-gray-700' : 'divide-gray-100'}`}>
+          <div className={`divide-y max-h-80 overflow-y-auto ${isDarkMode ? 'divide-gray-700' : 'divide-gray-100'}`}>
             {activities.length > 0 ? (
               activities.map(log => <ActivityItem key={log.id} log={log} isDarkMode={isDarkMode} />)
             ) : (
-              <div className={`p-8 text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                <Activity size={32} className={`mx-auto mb-3 ${isDarkMode ? 'text-gray-600' : 'text-gray-400'}`} />
-                <p>No recent activity found</p>
+              <div className={`p-6 text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                <Activity size={24} className={`mx-auto mb-2 ${isDarkMode ? 'text-gray-600' : 'text-gray-400'}`} />
+                <p className="text-xs">No recent activity found</p>
               </div>
             )}
           </div>
         </div>
 
         {/* Quick Actions */}
-        <div className={`rounded-xl shadow-sm border p-6 h-fit ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
-          <h3 className={`text-lg font-bold mb-4 flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-            <Zap size={20} className="text-orange-600" />
+        <div className={`rounded-lg shadow-sm border p-4 h-fit ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
+          <h3 className={`text-sm font-bold mb-3 flex items-center gap-1.5 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+            <Zap size={16} className="text-orange-600" />
             Quick Actions
           </h3>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {isAdmin && (
               <>
                 <button 
                   onClick={() => navigate('/students')}
-                  className={`w-full px-4 py-3 rounded-lg font-medium text-sm transition border ${isDarkMode ? 'bg-blue-900 hover:bg-blue-800 text-blue-300 border-blue-700' : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200'}`}
+                  className={`w-full px-3 py-2 rounded-lg font-medium text-xs transition border ${isDarkMode ? 'bg-blue-900 hover:bg-blue-800 text-blue-300 border-blue-700' : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200'}`}
                 >
                   + Add Student
                 </button>
                 <button 
                   onClick={() => navigate('/teachers')}
-                  className={`w-full px-4 py-3 rounded-lg font-medium text-sm transition border ${isDarkMode ? 'bg-green-900 hover:bg-green-800 text-green-300 border-green-700' : 'bg-green-50 hover:bg-green-100 text-green-700 border-green-200'}`}
+                  className={`w-full px-3 py-2 rounded-lg font-medium text-xs transition border ${isDarkMode ? 'bg-green-900 hover:bg-green-800 text-green-300 border-green-700' : 'bg-green-50 hover:bg-green-100 text-green-700 border-green-200'}`}
                 >
                   + Add Teacher
                 </button>
                 <button 
                   onClick={() => navigate('/batches')}
-                  className={`w-full px-4 py-3 rounded-lg font-medium text-sm transition border ${isDarkMode ? 'bg-orange-900 hover:bg-orange-800 text-orange-300 border-orange-700' : 'bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200'}`}
+                  className={`w-full px-3 py-2 rounded-lg font-medium text-xs transition border ${isDarkMode ? 'bg-orange-900 hover:bg-orange-800 text-orange-300 border-orange-700' : 'bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200'}`}
                 >
                   + New Batch
                 </button>
                 <button 
                   onClick={() => navigate('/fees')}
-                  className={`w-full px-4 py-3 rounded-lg font-medium text-sm transition border ${isDarkMode ? 'bg-amber-900 hover:bg-amber-800 text-amber-300 border-amber-700' : 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200'}`}
+                  className={`w-full px-3 py-2 rounded-lg font-medium text-xs transition border ${isDarkMode ? 'bg-amber-900 hover:bg-amber-800 text-amber-300 border-amber-700' : 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-200'}`}
                 >
                   💰 Manage Fees
                 </button>
@@ -310,7 +402,7 @@ const Dashboard: React.FC = () => {
             {(isTeacher || isAdmin) && (
               <button 
                 onClick={() => navigate('/homework')}
-                className={`w-full px-4 py-3 rounded-lg font-medium text-sm transition border ${isDarkMode ? 'bg-pink-900 hover:bg-pink-800 text-pink-300 border-pink-700' : 'bg-pink-50 hover:bg-pink-100 text-pink-700 border-pink-200'}`}
+                className={`w-full px-3 py-2 rounded-lg font-medium text-xs transition border ${isDarkMode ? 'bg-pink-900 hover:bg-pink-800 text-pink-300 border-pink-700' : 'bg-pink-50 hover:bg-pink-100 text-pink-700 border-pink-200'}`}
               >
                 📝 Assign Homework
               </button>
@@ -318,7 +410,7 @@ const Dashboard: React.FC = () => {
 
             <button 
               onClick={() => navigate('/analytics')}
-              className={`w-full px-4 py-3 rounded-lg font-medium text-sm transition border ${isDarkMode ? 'bg-indigo-900 hover:bg-indigo-800 text-indigo-300 border-indigo-700 mt-4 pt-4 border-t-2 border-t-gray-700' : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200 mt-4 pt-4 border-t-2'}`}
+              className={`w-full px-3 py-2 rounded-lg font-medium text-xs transition border ${isDarkMode ? 'bg-indigo-900 hover:bg-indigo-800 text-indigo-300 border-indigo-700 mt-3 pt-2 border-t-2 border-t-gray-700' : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200 mt-3 pt-2 border-t-2'}`}
             >
               📊 View Analytics
             </button>

@@ -285,10 +285,10 @@ const Fees: React.FC = () => {
   });
 
   return (
-    <div className={`space-y-6 min-h-screen px-4 md:px-8 py-6 ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
+    <div className={`space-y-4 min-h-screen px-4 md:px-6 py-4 ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h1 className={`text-3xl font-bold flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-          <DollarSign className="text-green-600" size={36} />
+        <h1 className={`text-2xl font-bold flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+          <DollarSign className="text-green-600" size={28} />
           Fees Management
         </h1>
         
@@ -312,7 +312,7 @@ const Fees: React.FC = () => {
       {activeTab === 'collection' && (
         <div className="space-y-4">
           {/* Filters Section */}
-          <div className={`p-4 rounded-xl shadow-sm border space-y-4 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
+          <div className={`p-3 rounded-lg shadow-sm border space-y-3 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
             <div className={`flex items-center gap-2 font-medium ${isDarkMode ? 'text-gray-200' : 'text-gray-700'}`}>
               <Filter className="w-4 h-4" />
               <span>Filters</span>
@@ -483,20 +483,20 @@ const Fees: React.FC = () => {
             )}
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {feePlans.length === 0 ? (
-              <div className={`col-span-full text-center p-8 rounded-xl border ${isDarkMode ? 'bg-gray-800 border-gray-700 text-gray-400' : 'bg-white border-gray-100 text-gray-500'}`}>No fee plans found.</div>
+              <div className={`col-span-full text-center p-6 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-700 text-gray-400' : 'bg-white border-gray-100 text-gray-500'}`}>No fee plans found.</div>
             ) : (
               feePlans.map(plan => (
-                <div key={plan.id} className={`p-6 rounded-xl shadow-sm border transition relative overflow-hidden ${isDarkMode ? 'bg-gray-800 border-gray-700 hover:shadow-lg' : 'bg-white border-gray-100 hover:shadow-md'}`}>
+                <div key={plan.id} className={`p-4 rounded-lg shadow-sm border transition relative overflow-hidden ${isDarkMode ? 'bg-gray-800 border-gray-700 hover:shadow-lg' : 'bg-white border-gray-100 hover:shadow-md'}`}>
                   <div className={`absolute top-0 right-0 text-xs font-bold px-2 py-1 rounded-bl-lg uppercase ${isDarkMode ? 'bg-yellow-900 text-yellow-300' : 'bg-yellow-50 text-yellow-700'}`}>
                     {plan.frequency}
                   </div>
-                  <h3 className={`text-lg font-bold mb-2 pr-8 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{plan.name}</h3>
+                  <h3 className={`text-sm font-bold mb-2 pr-8 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{plan.name}</h3>
                   
-                  <div className={`flex items-baseline gap-1 mb-4 ${isDarkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>
-                    <span className="text-sm font-medium">{plan.currency}</span>
-                    <span className="text-2xl font-bold">{plan.amount}</span>
+                  <div className={`flex items-baseline gap-1 mb-3 ${isDarkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>
+                    <span className="text-xs font-medium">{plan.currency}</span>
+                    <span className="text-xl font-bold">{plan.amount}</span>
                   </div>
                   
                   <div className={`space-y-2 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
@@ -567,7 +567,7 @@ const Fees: React.FC = () => {
         setIsPlanModalOpen(false);
         setEditingPlan(null);
         setPlanForm({ name: '', amount: '', currency: 'INR', frequency: 'monthly', board: '', standard: '', subject: '' });
-      }} title={editingPlan ? 'Edit Fee Plan' : 'Add Fee Plan'}>
+      }} title={editingPlan ? 'Edit Fee Plan' : 'Add Fee Plan'} isDarkMode={isDarkMode}>
         <form onSubmit={handleCreatePlan} className="space-y-4">
           <div>
             <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Plan Name *</label>
@@ -624,7 +624,7 @@ const Fees: React.FC = () => {
       </Modal>
 
       {/* Record Payment Modal */}
-      <Modal isOpen={isPayModalOpen} onClose={() => setIsPayModalOpen(false)} title="Record Payment">
+      <Modal isOpen={isPayModalOpen} onClose={() => setIsPayModalOpen(false)} title="Record Payment" isDarkMode={isDarkMode}>
         <form onSubmit={handleRecordPayment} className="space-y-4">
           <div>
             <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Select Student *</label>
@@ -670,7 +670,7 @@ const Fees: React.FC = () => {
       </Modal>
 
       {/* Assign Plan Modal */}
-      <Modal isOpen={isAssignModalOpen} onClose={() => setIsAssignModalOpen(false)} title="Assign Fee Plan">
+      <Modal isOpen={isAssignModalOpen} onClose={() => setIsAssignModalOpen(false)} title="Assign Fee Plan" isDarkMode={isDarkMode}>
         <form onSubmit={handleAssignPlan} className="space-y-4">
           <div className={`p-4 rounded-lg border text-sm mb-4 ${isDarkMode ? 'bg-yellow-900 border-yellow-700 text-yellow-300' : 'bg-yellow-50 border-yellow-100 text-yellow-800'}`}>
             Assigning a plan will set the expected fee amount for this student. This allows tracking of dues.

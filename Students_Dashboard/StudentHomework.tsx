@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { useDarkMode } from '../context/DarkModeContext';
 import { api } from '../services/api';
 import { 
   BookOpen, 
@@ -37,6 +38,7 @@ interface Submission {
 const StudentHomework: React.FC = () => {
   const { user } = useAuth();
   const { showToast } = useToast();
+  const { isDarkMode } = useDarkMode();
   const [homework, setHomework] = useState<Homework[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -124,36 +126,36 @@ const StudentHomework: React.FC = () => {
     <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">My Homework</h1>
-        <p className="text-gray-600">View and submit your assignments</p>
+        <h1 className={`text-3xl font-bold mb-2 flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}><BookOpen size={40} className="text-blue-600" />My Homework</h1>
+        <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>View and submit your assignments</p>
       </div>
 
       {/* Homework List */}
       {homework.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg shadow">
-          <BookOpen className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-          <h3 className="text-xl font-medium text-gray-900 mb-2">No homework found</h3>
-          <p className="text-gray-600">You don't have any homework assignments yet</p>
+        <div className={`text-center py-12 rounded-lg shadow ${isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white'}`}>
+          <BookOpen className={`w-16 h-16 mx-auto mb-4 ${isDarkMode ? 'text-gray-600' : 'text-gray-400'}`} />
+          <h3 className={`text-xl font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>No homework found</h3>
+          <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>You don't have any homework assignments yet</p>
         </div>
       ) : (
         <div className="space-y-4">
           {homework.map((hw) => (
-            <div key={hw.id} className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+            <div key={hw.id} className={`rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow ${isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white'}`}>
               <div className="flex justify-between items-start">
                 <div className="flex-1">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">{hw.title}</h3>
-                  <p className="text-gray-600 mb-3">{hw.description}</p>
+                  <h3 className={`text-xl font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{hw.title}</h3>
+                  <p className={isDarkMode ? 'text-gray-300 mb-3' : 'text-gray-600 mb-3'}>{hw.description}</p>
                   
                   <div className="flex flex-wrap gap-4 text-sm">
-                    <span className="flex items-center text-gray-600">
+                    <span className={`flex items-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                       <BookOpen className="w-4 h-4 mr-1" />
                       {hw.subject}
                     </span>
-                    <span className="flex items-center text-gray-600">
+                    <span className={`flex items-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                       <Clock className="w-4 h-4 mr-1" />
                       Due: {formatDate(hw.dueDate)}
                     </span>
-                    <span className="text-gray-600">
+                    <span className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
                       {hw.board} - Std {hw.standard}
                     </span>
                   </div>

@@ -57,6 +57,18 @@ const Profile: React.FC = () => {
     loadProfile();
   }, [user]);
 
+  // Sync formData when user context changes (important for name updates)
+  useEffect(() => {
+    if (user) {
+      console.log('👤 Syncing formData with user context:', user);
+      setFormData(prev => ({
+        ...prev,
+        name: user.name || prev.name,
+        email: user.email || prev.email,
+      }));
+    }
+  }, [user?.name, user?.email, user?.uid]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -71,31 +83,16 @@ const Profile: React.FC = () => {
         department: formData.department,
         institution: formData.institution,
       };
-      console.log('📤 Sending profile update:', payload);
+      console.log('📤 [1] Sending profile update:', payload);
       const response = await api.put('/users/profile', payload);
-      console.log('✅ Profile update response:', response);
+      console.log('✅ [2] Profile update API response:', response);
       
-      setMessageType('success');
-      setShowMessage('Profile updated successfully!');
-      setIsEditing(false);
+      // Extract updated profile from response
+      const updatedProfile = response.profile || response;
+      console.log('📋 [3] Extracted profile data:', updatedProfile);
       
-      // Reload profile to verify changes were saved
-      const apiResponse = await api.get<any>('/users/profile');
-      console.log('📥 Reloaded profile:', apiResponse);
-      
-      // API returns {ok: true, profile: {...}}, so access the nested profile
-      const updatedProfile = apiResponse.profile || apiResponse;
-      
-      setFormData({
-        name: updatedProfile.name || formData.name,
-        email: updatedProfile.email || formData.email,
-        phone: updatedProfile.phone || formData.phone,
-        department: updatedProfile.department || formData.department,
-        institution: updatedProfile.institution || formData.institution,
-      });
-      
-      // Update Auth context with new user data
-      console.log('🔄 Updating Auth context with:', {
+      // Update Auth context FIRST so user context reflects new data
+      console.log('🔄 [4] Updating Auth context with:', {
         name: updatedProfile.name,
         phone: updatedProfile.phone,
         department: updatedProfile.department,
@@ -107,6 +104,23 @@ const Profile: React.FC = () => {
         department: updatedProfile.department,
         institution: updatedProfile.institution,
       });
+      
+      // Update formData to reflect the saved values
+      console.log('📝 [5] Updating formData with saved values');
+      setFormData({
+        name: updatedProfile.name || formData.name,
+        email: updatedProfile.email || formData.email,
+        phone: updatedProfile.phone || formData.phone,
+        department: updatedProfile.department || formData.department,
+        institution: updatedProfile.institution || formData.institution,
+      });
+      
+      // Exit editing mode
+      console.log('✏️ [6] Exiting edit mode');
+      setIsEditing(false);
+      
+      setMessageType('success');
+      setShowMessage('Profile updated successfully!');
       
       setTimeout(() => setShowMessage(''), 3000);
     } catch (error) {
@@ -181,7 +195,7 @@ const Profile: React.FC = () => {
               {getInitials(user?.name)}
             </div>
             <div className="flex-1">
-              <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{formData.name}</h2>
+              <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{user?.name || formData.name}</h2>
               <p className={`capitalize mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                 {user?.role === 'admin' && '👨‍💼 Administrator'}
                 {user?.role === 'teacher' && '👨‍🏫 Teacher'}
@@ -211,7 +225,7 @@ const Profile: React.FC = () => {
                   className={`w-full px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-200 bg-white text-gray-900'} border`}
                 />
               ) : (
-                <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{formData.name}</p>
+                <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{user?.name || formData.name}</p>
               )}
             </div>
 

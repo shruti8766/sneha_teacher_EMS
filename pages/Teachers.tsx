@@ -104,33 +104,33 @@ const Teachers: React.FC = () => {
   };
 
   return (
-    <div className={`space-y-6 min-h-screen px-4 md:px-8 py-6 ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
+    <div className={`space-y-4 min-h-screen px-3 md:px-6 py-4 ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
       <div className="flex items-center justify-between">
-        <h1 className={`text-3xl font-bold flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-          <GraduationCap className="text-green-600" size={36} />
+        <h1 className={`text-2xl font-bold flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+          <GraduationCap className="text-green-600" size={28} />
           Teachers
         </h1>
         {user?.role === 'admin' && (
           <button
             onClick={() => setIsModalOpen(true)}
-            className="bg-green-600 text-white px-6 py-2.5 rounded-lg hover:bg-green-700 transition flex items-center gap-2 font-medium shadow-sm"
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center gap-1.5 font-medium shadow-sm text-sm"
           >
-            <Plus size={20} /> Add Teacher
+            <Plus size={18} /> Add Teacher
           </button>
         )}
       </div>
       
-      <div className={`rounded-xl shadow-sm border overflow-hidden ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
+      <div className={`rounded-lg shadow-sm border overflow-hidden ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
         {loading ? (
-          <div className="p-8 flex justify-center"><Loader2 className="animate-spin text-blue-600" /></div>
+          <div className="p-6 flex justify-center"><Loader2 className="animate-spin text-blue-600" size={24} /></div>
         ) : (
           <table className="w-full text-left">
             <thead className={`border-b ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-100'}`}>
               <tr>
-                <th className={`px-6 py-4 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Name</th>
-                <th className={`px-6 py-4 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Subjects</th>
-                <th className={`px-6 py-4 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Contact</th>
-                <th className={`px-6 py-4 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Action</th>
+                <th className={`px-4 py-2.5 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Name</th>
+                <th className={`px-4 py-2.5 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Subjects</th>
+                <th className={`px-4 py-2.5 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Contact</th>
+                <th className={`px-4 py-2.5 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Action</th>
               </tr>
             </thead>
             <tbody className={`divide-y ${isDarkMode ? 'divide-gray-700' : 'divide-gray-100'}`}>
@@ -140,38 +140,37 @@ const Teachers: React.FC = () => {
                   onClick={() => navigate(`/teachers/${teacher.id}`)}
                   className={`transition cursor-pointer ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}
                 >
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center text-white font-bold">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
                         {teacher.name.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <div className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{teacher.name}</div>
-                        <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>ID: {teacher.id}</div>
+                        <div className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{teacher.name}</div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
                       {teacher.subjects?.map(s => (
-                        <span key={s} className={`px-2 py-0.5 rounded text-xs ${isDarkMode ? 'bg-green-900 text-green-300' : 'bg-green-50 text-green-700'}`}>{s}</span>
+                        <span key={s} className={`px-1.5 py-0.5 rounded text-xs ${isDarkMode ? 'bg-green-900 text-green-300' : 'bg-green-50 text-green-700'}`}>{s}</span>
                       ))}
                     </div>
                   </td>
-                  <td className={`px-6 py-4 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2"><Mail size={14}/> {teacher.email}</div>
-                      {teacher.phone && <div className="flex items-center gap-2"><Phone size={14}/> {teacher.phone}</div>}
+                  <td className={`px-4 py-3 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    <div className="flex flex-col gap-0.5">
+                      <div className="flex items-center gap-1.5"><Mail size={12}/> {teacher.email}</div>
+                      {teacher.phone && <div className="flex items-center gap-1.5"><Phone size={12}/> {teacher.phone}</div>}
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-3">
                     {user?.role === 'admin' && (
                       <button
                         onClick={(e) => handleDeleteTeacher(teacher.id, teacher.name, e)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition flex items-center gap-1"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-lg transition flex items-center gap-1 text-xs"
                         title="Delete teacher"
                       >
-                        <Trash2 size={16} /> Delete
+                        <Trash2 size={14} /> Delete
                       </button>
                     )}
                   </td>
@@ -182,28 +181,28 @@ const Teachers: React.FC = () => {
         )}
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add New Teacher">
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add New Teacher" isDarkMode={isDarkMode}>
         <form onSubmit={handleCreate} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
-              <input required type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Name *</label>
+              <input required type="text" className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-              <input required type="email" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
+              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Email *</label>
+              <input required type="email" className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
-              <input required type="password" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900" placeholder="Min 8 chars" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
+              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Password *</label>
+              <input required type="password" className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} placeholder="Min 8 chars" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-              <input type="tel" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
+              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Phone</label>
+              <input type="tel" className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Subjects (comma separated)</label>
-              <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900" placeholder="Maths, Physics" value={formData.subjects} onChange={e => setFormData({...formData, subjects: e.target.value})} />
+              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Subjects (comma separated)</label>
+              <input type="text" className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} placeholder="Maths, Physics" value={formData.subjects} onChange={e => setFormData({...formData, subjects: e.target.value})} />
             </div>
           </div>
           <div className="flex justify-end gap-3 mt-6 pt-4 border-t">

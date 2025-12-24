@@ -6,7 +6,7 @@ import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { useDarkMode } from '../context/DarkModeContext';
 import { useDetail } from '../context/DetailContext';
-import { Loader2, DollarSign, Book, FileText, Plus, Edit2, Trash2, CreditCard, BookOpen, Calendar, UserCheck, X, Users } from 'lucide-react';
+import { Loader2, DollarSign, Book, FileText, Plus, Edit2, Trash2, CreditCard, BookOpen, Calendar, UserCheck, X, Users, Lock, Eye, EyeOff, AlertCircle, Check } from 'lucide-react';
 import Modal from '../components/Modal';
 const StudentDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -26,7 +26,7 @@ const StudentDetail: React.FC = () => {
   const [allBatches, setAllBatches] = useState<Batch[]>([]);
   const [batchTeacher, setBatchTeacher] = useState<Teacher | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'fees' | 'homework' | 'tests' | 'batch'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'fees' | 'homework' | 'tests' | 'batch' | 'security'>('overview');
 
   // Modal states
   const [isHomeworkModalOpen, setIsHomeworkModalOpen] = useState(false);
@@ -38,6 +38,16 @@ const StudentDetail: React.FC = () => {
   const [isAssignTeacherModalOpen, setIsAssignTeacherModalOpen] = useState(false);
   const [selectedTest, setSelectedTest] = useState<Test | null>(null);
   const [editingHomework, setEditingHomework] = useState<Homework | null>(null);
+  
+  // Password management states
+  const [studentPasswordFromBackend, setStudentPasswordFromBackend] = useState('');
+  const [showBackendPassword, setShowBackendPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    new: '',
+    confirm: '',
+  });
   
   // Form states
   const [homeworkForm, setHomeworkForm] = useState({
@@ -239,6 +249,16 @@ const StudentDetail: React.FC = () => {
     };
   }, [id, showToast]);
 
+  // Enforce tab restrictions for teachers
+  useEffect(() => {
+    if (user?.role === 'teacher') {
+      const restrictedTabs = ['fees', 'homework', 'tests', 'security'];
+      if (restrictedTabs.includes(activeTab)) {
+        setActiveTab('overview');
+      }
+    }
+  }, [user?.role, activeTab]);
+
   // Load teachers for assignment
   const loadTeachers = async () => {
     try {
@@ -246,6 +266,79 @@ const StudentDetail: React.FC = () => {
       setTeachers(response.items.filter(t => t.active !== false));
     } catch (error) {
       console.error('Failed to load teachers:', error);
+    }
+  };
+
+  // Load student password for security tab
+  const loadStudentPassword = async () => {
+    if (!id) return;
+    try {
+      console.log('🔐 Fetching student password from backend...');
+      const response = await api.get<any>(`/students/${id}/password`);
+      console.log('📥 Password response:', response);
+      
+      if (response && response.password !== undefined) {
+        if (response.password === '') {
+          setStudentPasswordFromBackend('[Not set - Please change password once]');
+          console.log('⚠️ Password field is empty in database');
+        } else {
+          setStudentPasswordFromBackend(response.password);
+          console.log('✅ Student password loaded successfully');
+        }
+      } else {
+        setStudentPasswordFromBackend('[Unable to load]');
+        console.error('❌ Invalid response format:', response);
+      }
+    } catch (error) {
+      console.error('❌ Failed to load student password:', error);
+      setStudentPasswordFromBackend('[Error loading password]');
+    }
+  };
+
+  // Password Change Functions
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setPasswordForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleUpdateStudentPassword = async () => {
+    if (passwordForm.new !== passwordForm.confirm) {
+      showToast('New passwords do not match!', 'error');
+      return;
+    }
+    if (passwordForm.new.length < 8) {
+      showToast('New password must be at least 8 characters long!', 'error');
+      return;
+    }
+    if (!id) return;
+
+    setSubmitting(true);
+    try {
+      const payload = {
+        newPassword: passwordForm.new,
+      };
+      console.log('📤 Sending student password change request');
+      const response = await api.post(`/students/${id}/change-password`, payload);
+      console.log('✅ Password change response:', response);
+      
+      // Reload the current password display to show the new password
+      try {
+        const pwdResponse = await api.get<any>(`/students/${id}/password`);
+        if (pwdResponse && pwdResponse.password) {
+          setStudentPasswordFromBackend(pwdResponse.password);
+          console.log('🔄 Student password display updated');
+        }
+      } catch (err) {
+        console.error('Failed to reload password display:', err);
+      }
+      
+      showToast('✅ Student password updated successfully!');
+      setPasswordForm({ new: '', confirm: '' });
+    } catch (error: any) {
+      console.error('❌ Error updating password:', error);
+      showToast(error.message || 'Failed to update student password. Please try again.', 'error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -647,10 +740,10 @@ const StudentDetail: React.FC = () => {
     return <div className={`text-center p-12 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Student not found.</div>;
   }
 
-  const isAdmin = user?.role === 'admin' || user?.role === 'teacher';
+  const isAdmin = user?.role === 'admin';
 
   return (
-    <div className={`space-y-6 p-6 min-h-screen max-w-7xl mx-auto px-4 md:px-8 py-6 ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
+    <div className={`space-y-4 p-3 min-h-screen max-w-7xl mx-auto px-3 md:px-6 py-4 ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
       {/* Header Section */}
       <div className={`rounded-xl shadow-sm border p-8 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
         <div className="flex items-start justify-between">
@@ -670,31 +763,41 @@ const StudentDetail: React.FC = () => {
         <div className={`flex gap-2 mt-6 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
           <button 
             onClick={() => setActiveTab('overview')}
-            className={`px-6 py-3 text-sm font-medium transition border-b-2 ${activeTab === 'overview' ? 'border-blue-600 text-blue-600' : `border-transparent ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}`}
+            className={`px-4 py-2 text-xs font-medium transition border-b-2 ${activeTab === 'overview' ? 'border-blue-600 text-blue-600' : `border-transparent ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}`}
           >
             Overview
           </button>
-          <button 
-            onClick={() => setActiveTab('fees')}
-            className={`px-6 py-3 text-sm font-medium transition border-b-2 ${activeTab === 'fees' ? 'border-blue-600 text-blue-600' : `border-transparent ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}`}
-          >
-            Fee Plan
-          </button>
-          <button 
-            onClick={() => setActiveTab('homework')}
-            className={`px-6 py-3 text-sm font-medium transition border-b-2 ${activeTab === 'homework' ? 'border-blue-600 text-blue-600' : `border-transparent ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}`}
-          >
-            Homework ({homework.length})
-          </button>
-          <button 
-            onClick={() => setActiveTab('tests')}
-            className={`px-6 py-3 text-sm font-medium transition border-b-2 ${activeTab === 'tests' ? 'border-blue-600 text-blue-600' : `border-transparent ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}`}
-          >
-            Tests & Results ({tests.length})
-          </button>
+          {user?.role === 'admin' && (
+            <>
+              <button 
+                onClick={() => setActiveTab('fees')}
+                className={`px-4 py-2 text-xs font-medium transition border-b-2 ${activeTab === 'fees' ? 'border-blue-600 text-blue-600' : `border-transparent ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}`}
+              >
+                Fee Plan
+              </button>
+              <button 
+                onClick={() => setActiveTab('homework')}
+                className={`px-4 py-2 text-xs font-medium transition border-b-2 ${activeTab === 'homework' ? 'border-blue-600 text-blue-600' : `border-transparent ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}`}
+              >
+                Homework ({homework.length})
+              </button>
+              <button 
+                onClick={() => setActiveTab('tests')}
+                className={`px-4 py-2 text-xs font-medium transition border-b-2 ${activeTab === 'tests' ? 'border-blue-600 text-blue-600' : `border-transparent ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}`}
+              >
+                Tests & Results ({tests.length})
+              </button>
+              <button 
+                onClick={() => { setActiveTab('security'); loadStudentPassword(); }}
+                className={`px-4 py-2 text-xs font-medium transition border-b-2 ${activeTab === 'security' ? 'border-blue-600 text-blue-600' : `border-transparent ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}`}
+              >
+                Security
+              </button>
+            </>
+          )}
           <button 
             onClick={() => setActiveTab('batch')}
-            className={`px-6 py-3 text-sm font-medium transition border-b-2 ${activeTab === 'batch' ? 'border-blue-600 text-blue-600' : `border-transparent ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}`}
+            className={`px-4 py-2 text-xs font-medium transition border-b-2 ${activeTab === 'batch' ? 'border-blue-600 text-blue-600' : `border-transparent ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}`}
           >
             Batch & Teacher
           </button>
@@ -703,7 +806,7 @@ const StudentDetail: React.FC = () => {
 
       {/* Overview Tab */}
       {activeTab === 'overview' && (
-        <div className={`rounded-xl shadow-sm border p-8 space-y-6 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
+        <div className={`rounded-lg shadow-sm border p-4 space-y-4 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
           <div className="flex items-center justify-between">
             <h2 className={`text-2xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Student Information</h2>
             {isAdmin && (
@@ -1125,45 +1228,43 @@ const StudentDetail: React.FC = () => {
           </div>
 
           {/* Divider */}
-          <div className={`border-t-2 ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}></div>
+          {isAdmin && <div className={`border-t-2 ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}></div>}
 
-          {/* Assigned Teachers Section */}
-          <div>
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className={`text-xl font-semibold ${isDarkMode ? 'text-gray-100' : 'text-gray-800'}`}>Subject Teachers</h3>
-                <p className={`text-sm mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Teachers assigned to teach specific subjects</p>
-              </div>
-              {isAdmin && (
+          {/* Assigned Teachers Section - Only for Admins */}
+          {isAdmin && (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className={`text-xl font-semibold ${isDarkMode ? 'text-gray-100' : 'text-gray-800'}`}>Subject Teachers</h3>
+                  <p className={`text-sm mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Teachers assigned to teach specific subjects</p>
+                </div>
                 <button
                   onClick={() => setIsAssignTeacherModalOpen(true)}
                   className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition flex items-center gap-2 text-sm font-medium shadow-sm"
                 >
                   <Plus size={16} /> Assign Teacher
                 </button>
-              )}
-            </div>
+              </div>
 
-            {assignedTeachers.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {assignedTeachers.map((assignment) => (
-                  <div className={`p-4 rounded-lg border flex items-start justify-between ${isDarkMode ? 'bg-green-900 border-green-700' : 'bg-green-50 border-green-200'}`}>
-                    <div className="flex-1">
-                      <div className={`flex items-center gap-2 mb-2 ${isDarkMode ? 'text-green-300' : 'text-green-700'}`}>
-                        <UserCheck size={18} />
-                        <span className={`font-semibold ${isDarkMode ? 'text-green-100' : 'text-green-900'}`}>{assignment.teacherName}</span>
-                      </div>
-                      {assignment.subjects && assignment.subjects.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {assignment.subjects.map((subject, idx) => (
-                            <span key={idx} className={`text-xs px-2 py-1 rounded border ${isDarkMode ? 'bg-green-800 text-green-300 border-green-600' : 'bg-white text-green-700 border-green-300'}`}>
-                              {subject}
-                            </span>
-                          ))}
+              {assignedTeachers.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {assignedTeachers.map((assignment) => (
+                    <div className={`p-4 rounded-lg border flex items-start justify-between ${isDarkMode ? 'bg-green-900 border-green-700' : 'bg-green-50 border-green-200'}`}>
+                      <div className="flex-1">
+                        <div className={`flex items-center gap-2 mb-2 ${isDarkMode ? 'text-green-300' : 'text-green-700'}`}>
+                          <UserCheck size={18} />
+                          <span className={`font-semibold ${isDarkMode ? 'text-green-100' : 'text-green-900'}`}>{assignment.teacherName}</span>
                         </div>
-                      )}
-                    </div>
-                    {isAdmin && (
+                        {assignment.subjects && assignment.subjects.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {assignment.subjects.map((subject, idx) => (
+                              <span key={idx} className={`text-xs px-2 py-1 rounded border ${isDarkMode ? 'bg-green-800 text-green-300 border-green-600' : 'bg-white text-green-700 border-green-300'}`}>
+                                {subject}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                       <button
                         onClick={() => handleRemoveTeacher(assignment.teacherId)}
                         className={`hover:rounded transition p-1 ${isDarkMode ? 'text-red-400 hover:text-red-300 hover:bg-red-900' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
@@ -1171,20 +1272,20 @@ const StudentDetail: React.FC = () => {
                       >
                         <X size={16} />
                       </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className={`rounded-lg border p-8 text-center ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
-                <UserCheck size={32} className={`mx-auto mb-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`} />
-                <p className={`font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>No subject teachers assigned yet</p>
-              </div>
-            )}
-          </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className={`rounded-lg border p-8 text-center ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'}`}>
+                  <UserCheck size={32} className={`mx-auto mb-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`} />
+                  <p className={`font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>No subject teachers assigned yet</p>
+                </div>
+              )}
+            </div>
+          )}
 
-          {/* Suggested Teachers Section - Only show if no batch assigned */}
-          {!studentBatch && student.subjects && student.subjects.length > 0 && (
+          {/* Suggested Teachers Section - Only show for admins if no batch assigned */}
+          {isAdmin && !studentBatch && student.subjects && student.subjects.length > 0 && (
             <>
               <div className={`border-t-2 ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}></div>
               <div>
@@ -1221,20 +1322,18 @@ const StudentDetail: React.FC = () => {
                                 </div>
                               )}
                             </div>
-                            {isAdmin && (
-                              <button
-                                onClick={() => {
-                                  setTeacherAssignmentForm({
-                                    teacherId: teacher.id,
-                                    subjects: matchingSubjects.join(', ')
-                                  });
-                                  setIsAssignTeacherModalOpen(true);
-                                }}
-                                className={`px-3 py-1 rounded text-xs font-medium transition ml-2 ${isDarkMode ? 'bg-cyan-600 text-white hover:bg-cyan-700' : 'bg-cyan-600 text-white hover:bg-cyan-700'}`}
-                              >
-                                Assign
-                              </button>
-                            )}
+                            <button
+                              onClick={() => {
+                                setTeacherAssignmentForm({
+                                  teacherId: teacher.id,
+                                  subjects: matchingSubjects.join(', ')
+                                });
+                                setIsAssignTeacherModalOpen(true);
+                              }}
+                              className={`px-3 py-1 rounded text-xs font-medium transition ml-2 ${isDarkMode ? 'bg-cyan-600 text-white hover:bg-cyan-700' : 'bg-cyan-600 text-white hover:bg-cyan-700'}`}
+                            >
+                              Assign
+                            </button>
                           </div>
                         );
                       })
@@ -1249,6 +1348,110 @@ const StudentDetail: React.FC = () => {
               </div>
             </>
           )}
+        </div>
+      )}
+
+      {/* Security Tab */}
+      {activeTab === 'security' && (
+        <div className={`rounded-xl shadow-sm border p-8 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
+          <h2 className={`text-2xl font-bold mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Security Settings</h2>
+
+          <div className="space-y-6">
+            {/* Change Password */}
+            <div>
+              <h3 className={`font-semibold mb-6 flex items-center gap-2 text-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                <Lock size={20} className="text-red-600" />
+                Change Password
+              </h3>
+              <div className="space-y-4">
+                {/* Current Password Display */}
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    <span className="flex items-center gap-2">
+                      Current Password
+                      <span className={`text-xs font-normal ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>(View only)</span>
+                    </span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showBackendPassword ? 'text' : 'password'}
+                      value={studentPasswordFromBackend}
+                      disabled
+                      className={`w-full px-4 py-2 border rounded-lg cursor-not-allowed pr-12 font-mono ${isDarkMode ? 'bg-gray-700 border-gray-600 text-gray-300' : 'bg-gray-100 border-gray-200 text-gray-700'}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowBackendPassword(!showBackendPassword)}
+                      className={`absolute right-3 top-1/2 transform -translate-y-1/2 transition ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}
+                      title={showBackendPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showBackendPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                  <p className={`text-xs mt-2 flex items-start gap-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                    <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
+                    <span>This is the student's current password stored in the system. Click the eye icon to reveal it.</span>
+                  </p>
+                </div>
+                
+                {/* New Password */}
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>New Password <span className="text-red-500">*</span></label>
+                  <div className="relative">
+                    <input
+                      type={showNewPassword ? 'text' : 'password'}
+                      name="new"
+                      value={passwordForm.new}
+                      onChange={handlePasswordChange}
+                      className={`w-full px-4 py-2 border rounded-lg pr-12 focus:outline-none focus:ring-2 focus:ring-red-500 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
+                      placeholder="Minimum 8 characters"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className={`absolute right-3 top-1/2 transform -translate-y-1/2 transition ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}
+                      title={showNewPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Confirm Password */}
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Confirm Password <span className="text-red-500">*</span></label>
+                  <div className="relative">
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      name="confirm"
+                      value={passwordForm.confirm}
+                      onChange={handlePasswordChange}
+                      className={`w-full px-4 py-2 border rounded-lg pr-12 focus:outline-none focus:ring-2 focus:ring-red-500 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
+                      placeholder="Re-enter new password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className={`absolute right-3 top-1/2 transform -translate-y-1/2 transition ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}
+                      title={showConfirmPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Update Button */}
+                <button
+                  onClick={handleUpdateStudentPassword}
+                  disabled={submitting}
+                  className="flex items-center gap-2 px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submitting ? <Loader2 className="animate-spin" size={18} /> : <Lock size={18} />}
+                  {submitting ? 'Updating...' : 'Update Password'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1639,60 +1842,60 @@ const StudentDetail: React.FC = () => {
       </Modal>
 
       {/* Edit Student Modal */}
-      <Modal isOpen={isEditStudentModalOpen} onClose={() => setIsEditStudentModalOpen(false)} title="Edit Student Details">
+      <Modal isOpen={isEditStudentModalOpen} onClose={() => setIsEditStudentModalOpen(false)} title="Edit Student Details" isDarkMode={isDarkMode}>
         <form onSubmit={handleUpdateStudent} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
-              <input required type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900" value={editStudentForm.name} onChange={e => setEditStudentForm({...editStudentForm, name: e.target.value})} />
+              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Name *</label>
+              <input required type="text" className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} value={editStudentForm.name} onChange={e => setEditStudentForm({...editStudentForm, name: e.target.value})} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-              <input required type="email" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900" value={editStudentForm.email} onChange={e => setEditStudentForm({...editStudentForm, email: e.target.value})} />
+              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Email *</label>
+              <input required type="email" className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} value={editStudentForm.email} onChange={e => setEditStudentForm({...editStudentForm, email: e.target.value})} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Board *</label>
-              <input required type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900" value={editStudentForm.board} onChange={e => setEditStudentForm({...editStudentForm, board: e.target.value})} />
+              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Board *</label>
+              <input required type="text" className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} value={editStudentForm.board} onChange={e => setEditStudentForm({...editStudentForm, board: e.target.value})} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Standard *</label>
-              <input required type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900" value={editStudentForm.standard} onChange={e => setEditStudentForm({...editStudentForm, standard: e.target.value})} />
+              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Standard *</label>
+              <input required type="text" className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} value={editStudentForm.standard} onChange={e => setEditStudentForm({...editStudentForm, standard: e.target.value})} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-              <input type="tel" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900" value={editStudentForm.phone} onChange={e => setEditStudentForm({...editStudentForm, phone: e.target.value})} />
+              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Phone</label>
+              <input type="tel" className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} value={editStudentForm.phone} onChange={e => setEditStudentForm({...editStudentForm, phone: e.target.value})} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">School Name</label>
-              <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900" value={editStudentForm.schoolName} onChange={e => setEditStudentForm({...editStudentForm, schoolName: e.target.value})} />
+              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>School Name</label>
+              <input type="text" className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} value={editStudentForm.schoolName} onChange={e => setEditStudentForm({...editStudentForm, schoolName: e.target.value})} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Parent Name</label>
-              <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900" value={editStudentForm.parentName} onChange={e => setEditStudentForm({...editStudentForm, parentName: e.target.value})} />
+              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Parent Name</label>
+              <input type="text" className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} value={editStudentForm.parentName} onChange={e => setEditStudentForm({...editStudentForm, parentName: e.target.value})} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Parent Phone</label>
-              <input type="tel" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900" value={editStudentForm.parentPhone} onChange={e => setEditStudentForm({...editStudentForm, parentPhone: e.target.value})} />
+              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Parent Phone</label>
+              <input type="tel" className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} value={editStudentForm.parentPhone} onChange={e => setEditStudentForm({...editStudentForm, parentPhone: e.target.value})} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Parent Email</label>
-              <input type="email" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900" value={editStudentForm.parentEmail} onChange={e => setEditStudentForm({...editStudentForm, parentEmail: e.target.value})} />
+              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Parent Email</label>
+              <input type="email" className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} value={editStudentForm.parentEmail} onChange={e => setEditStudentForm({...editStudentForm, parentEmail: e.target.value})} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Parent Profession</label>
-              <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900" value={editStudentForm.parentProfession} onChange={e => setEditStudentForm({...editStudentForm, parentProfession: e.target.value})} />
+              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Parent Profession</label>
+              <input type="text" className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} value={editStudentForm.parentProfession} onChange={e => setEditStudentForm({...editStudentForm, parentProfession: e.target.value})} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Parent Company Name</label>
-              <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900" value={editStudentForm.parentCompanyName} onChange={e => setEditStudentForm({...editStudentForm, parentCompanyName: e.target.value})} />
+              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Parent Company Name</label>
+              <input type="text" className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} value={editStudentForm.parentCompanyName} onChange={e => setEditStudentForm({...editStudentForm, parentCompanyName: e.target.value})} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Parent Designation</label>
-              <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900" value={editStudentForm.parentDesignation} onChange={e => setEditStudentForm({...editStudentForm, parentDesignation: e.target.value})} />
+              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Parent Designation</label>
+              <input type="text" className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} value={editStudentForm.parentDesignation} onChange={e => setEditStudentForm({...editStudentForm, parentDesignation: e.target.value})} />
             </div>
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Subjects (comma separated)</label>
-              <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none bg-white text-gray-900" placeholder="Maths, Physics" value={editStudentForm.subjects} onChange={e => setEditStudentForm({...editStudentForm, subjects: e.target.value})} />
+              <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Subjects (comma separated)</label>
+              <input type="text" className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`} placeholder="Maths, Physics" value={editStudentForm.subjects} onChange={e => setEditStudentForm({...editStudentForm, subjects: e.target.value})} />
             </div>
           </div>
           <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
@@ -1765,12 +1968,12 @@ const StudentDetail: React.FC = () => {
 
       {/* Assign Teacher Modal */}
       <Modal isOpen={isAssignTeacherModalOpen} onClose={() => setIsAssignTeacherModalOpen(false)} title="Assign Teacher to Student">
-        <form onSubmit={handleAssignTeacher} className="space-y-4">
+        <form onSubmit={handleAssignTeacher} className={`space-y-4 p-6 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Select Teacher *</label>
+            <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Select Teacher *</label>
             <select 
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none bg-white text-gray-900"
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
               value={teacherAssignmentForm.teacherId}
               onChange={e => setTeacherAssignmentForm({...teacherAssignmentForm, teacherId: e.target.value})}
             >
@@ -1781,26 +1984,26 @@ const StudentDetail: React.FC = () => {
                 </option>
               ))}
             </select>
-            <p className="text-xs text-gray-500 mt-1">Select the teacher you want to assign to this student</p>
+            <p className={`text-xs mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Select the teacher you want to assign to this student</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Subjects (Optional)</label>
+            <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Subjects (Optional)</label>
             <input 
               type="text"
               placeholder="e.g., Mathematics, Physics"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none bg-white text-gray-900"
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
               value={teacherAssignmentForm.subjects}
               onChange={e => setTeacherAssignmentForm({...teacherAssignmentForm, subjects: e.target.value})}
             />
-            <p className="text-xs text-gray-500 mt-1">Comma-separated list of subjects this teacher will teach to this student</p>
+            <p className={`text-xs mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Comma-separated list of subjects this teacher will teach to this student</p>
           </div>
 
-          <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+          <div className={`flex justify-end gap-3 mt-6 pt-4 border-t ${isDarkMode ? 'border-gray-600' : 'border-gray-200'}`}>
             <button 
               type="button" 
               onClick={() => setIsAssignTeacherModalOpen(false)} 
-              className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition"
+              className={`px-4 py-2 rounded-lg transition ${isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-100'}`}
             >
               Cancel
             </button>

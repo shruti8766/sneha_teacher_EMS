@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { useDarkMode } from '../context/DarkModeContext';
 import { api } from '../services/api';
 import { ClipboardCheck, Award, TrendingUp, Calendar, Loader2 } from 'lucide-react';
 
@@ -31,6 +32,7 @@ interface TestResult {
 const StudentTests: React.FC = () => {
   const { user } = useAuth();
   const { showToast } = useToast();
+  const { isDarkMode } = useDarkMode();
   const [tests, setTests] = useState<Test[]>([]);
   const [results, setResults] = useState<{ [key: string]: TestResult }>({});
   const [loading, setLoading] = useState(true);
@@ -160,114 +162,114 @@ const StudentTests: React.FC = () => {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-4 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Tests & Results</h1>
-        <p className="text-gray-600">Track your test performance</p>
+      <div className="mb-4">
+        <h1 className={`text-2xl font-bold mb-2 flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}><ClipboardCheck size={32} className="text-green-600" />Tests & Results</h1>
+        <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>Track your test performance</p>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow-md p-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+        <div className={`rounded-lg shadow-md p-3 ${isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white'}`}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Tests</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.totalTests}</p>
+              <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total Tests</p>
+              <p className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{stats.totalTests}</p>
             </div>
-            <ClipboardCheck className="w-8 h-8 text-blue-500" />
+            <ClipboardCheck className="w-6 h-6 text-blue-500" />
           </div>
         </div>
         
-        <div className="bg-white rounded-lg shadow-md p-4">
+        <div className={`rounded-lg shadow-md p-3 ${isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white'}`}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Completed</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.completed}</p>
+              <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Completed</p>
+              <p className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{stats.completed}</p>
             </div>
-            <Award className="w-8 h-8 text-green-500" />
+            <Award className="w-6 h-6 text-green-500" />
           </div>
         </div>
         
-        <div className="bg-white rounded-lg shadow-md p-4">
+        <div className={`rounded-lg shadow-md p-3 ${isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white'}`}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Average Score</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.averageScore.toFixed(1)}%</p>
+              <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Average Score</p>
+              <p className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{stats.averageScore.toFixed(1)}%</p>
             </div>
-            <TrendingUp className="w-8 h-8 text-purple-500" />
+            <TrendingUp className="w-6 h-6 text-purple-500" />
           </div>
         </div>
         
-        <div className="bg-white rounded-lg shadow-md p-4">
+        <div className={`rounded-lg shadow-md p-3 ${isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white'}`}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Highest Score</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.highestScore.toFixed(1)}%</p>
+              <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Highest Score</p>
+              <p className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{stats.highestScore.toFixed(1)}%</p>
             </div>
-            <Award className="w-8 h-8 text-yellow-500" />
+            <Award className="w-6 h-6 text-yellow-500" />
           </div>
         </div>
       </div>
 
       {/* Tests List */}
       {tests.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg shadow">
-          <ClipboardCheck className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-          <h3 className="text-xl font-medium text-gray-900 mb-2">No tests found</h3>
-          <p className="text-gray-600">You don't have any tests assigned yet</p>
+        <div className={`text-center py-12 rounded-lg shadow ${isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white'}`}>
+          <ClipboardCheck className={`w-16 h-16 mx-auto mb-4 ${isDarkMode ? 'text-gray-600' : 'text-gray-400'}`} />
+          <h3 className={`text-xl font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>No tests found</h3>
+          <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>You don't have any tests assigned yet</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {tests.map((test) => {
             const result = results[test.id];
             const hasResult = !!result;
 
             return (
-              <div key={test.id} className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+              <div key={test.id} className={`rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow ${isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white'}`}>
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">{test.title}</h3>
+                    <h3 className={`text-lg font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{test.title}</h3>
                     {test.description && (
-                      <p className="text-gray-600 mb-3">{test.description}</p>
+                      <p className={isDarkMode ? 'text-gray-300 mb-3' : 'text-gray-600 mb-3'}>{test.description}</p>
                     )}
                     
-                    <div className="flex flex-wrap gap-4 text-sm mb-4">
-                      <span className="flex items-center text-gray-600">
-                        <ClipboardCheck className="w-4 h-4 mr-1" />
+                    <div className="flex flex-wrap gap-3 text-xs mb-3">
+                      <span className={`flex items-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        <ClipboardCheck className="w-3 h-3 mr-1" />
                         {test.subject}
                       </span>
-                      <span className="flex items-center text-gray-600">
+                      <span className={`flex items-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                         <Calendar className="w-4 h-4 mr-1" />
                         {formatDate(test.date || test.dateTime)}
                       </span>
-                      <span className="text-gray-600">
+                      <span className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
                         Duration: {test.duration} min
                       </span>
-                      <span className="text-gray-600">
+                      <span className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
                         Total Marks: {test.totalMarks}
                       </span>
                     </div>
 
                     {/* Result Section */}
                     {hasResult ? (
-                      <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                      <div className={`mt-3 p-3 rounded-lg ${isDarkMode ? 'bg-gray-700 border border-gray-600' : 'bg-gray-50'}`}>
                         <div className="flex items-center justify-between">
                           <div>
-                            <h4 className="font-medium text-gray-900 mb-2">Your Result</h4>
-                            <div className="flex items-center gap-4">
+                            <h4 className={`font-medium mb-2 text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Your Result</h4>
+                            <div className="flex items-center gap-3">
                               <div>
-                                <span className="text-2xl font-bold text-gray-900">
+                                <span className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                                   {result.marksObtained}
                                 </span>
-                                <span className="text-gray-600"> / {test.totalMarks}</span>
+                                <span className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}> / {test.totalMarks}</span>
                               </div>
                               <div className={`px-3 py-1 rounded-full font-medium ${getGradeColor(result.percentage)}`}>
                                 {result.percentage.toFixed(1)}% - Grade {getGrade(result.percentage)}
                               </div>
                             </div>
                             {result.remarks && (
-                              <p className="mt-2 text-sm text-gray-600">
+                              <p className={`mt-2 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                                 <span className="font-medium">Remarks:</span> {result.remarks}
                               </p>
                             )}
@@ -276,8 +278,8 @@ const StudentTests: React.FC = () => {
                         </div>
                       </div>
                     ) : (
-                      <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                        <p className="text-yellow-800 text-sm">
+                      <div className={`mt-3 p-3 rounded-lg border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-yellow-50 border-yellow-200'}`}>
+                        <p className={`text-xs ${isDarkMode ? 'text-yellow-300' : 'text-yellow-800'}`}>
                           Result not yet published
                         </p>
                       </div>

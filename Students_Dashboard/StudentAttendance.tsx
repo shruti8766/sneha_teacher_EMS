@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { useDarkMode } from '../context/DarkModeContext';
 import { api } from '../services/api';
 import { Calendar, CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
 
@@ -22,6 +23,7 @@ interface AttendanceStats {
 const StudentAttendance: React.FC = () => {
   const { user } = useAuth();
   const { showToast } = useToast();
+  const { isDarkMode } = useDarkMode();
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [stats, setStats] = useState<AttendanceStats>({
     total: 0,
@@ -158,21 +160,21 @@ const StudentAttendance: React.FC = () => {
     switch (status) {
       case 'present':
         return (
-          <span className="flex items-center text-green-700 bg-green-100 px-3 py-1 rounded-full text-sm">
+          <span className={`flex items-center px-3 py-1 rounded-full text-sm font-medium ${isDarkMode ? 'text-green-300 bg-green-900' : 'text-green-700 bg-green-100'}`}>
             <CheckCircle className="w-4 h-4 mr-1" />
             Present
           </span>
         );
       case 'absent':
         return (
-          <span className="flex items-center text-red-700 bg-red-100 px-3 py-1 rounded-full text-sm">
+          <span className={`flex items-center px-3 py-1 rounded-full text-sm font-medium ${isDarkMode ? 'text-red-300 bg-red-900' : 'text-red-700 bg-red-100'}`}>
             <XCircle className="w-4 h-4 mr-1" />
             Absent
           </span>
         );
       case 'late':
         return (
-          <span className="flex items-center text-yellow-700 bg-yellow-100 px-3 py-1 rounded-full text-sm">
+          <span className={`flex items-center px-3 py-1 rounded-full text-sm font-medium ${isDarkMode ? 'text-yellow-300 bg-yellow-900' : 'text-yellow-700 bg-yellow-100'}`}>
             <Clock className="w-4 h-4 mr-1" />
             Late
           </span>
@@ -216,67 +218,68 @@ const StudentAttendance: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
+      <div className={`flex items-center justify-center h-96 ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
+        <Loader2 className="animate-spin text-blue-600" size={48} />
       </div>
     );
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className={`min-h-screen px-4 md:px-8 py-6 ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
+      <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Attendance</h1>
-        <p className="text-gray-600">Track your attendance records</p>
+      <div>
+        <h1 className={`text-3xl font-bold mb-2 flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}><Calendar size={40} className="text-yellow-600" />Attendance</h1>
+        <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>Track your attendance records</p>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow-md p-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className={`rounded-lg shadow-sm border p-4 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Days</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total Days</p>
+              <p className={`text-2xl font-bold ${isDarkMode ? 'text-blue-400' : 'text-gray-900'}`}>{stats.total}</p>
             </div>
             <Calendar className="w-8 h-8 text-blue-500" />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-4">
+        <div className={`rounded-lg shadow-sm border p-4 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Present</p>
-              <p className="text-2xl font-bold text-green-600">{stats.present}</p>
+              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Present</p>
+              <p className={`text-2xl font-bold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>{stats.present}</p>
             </div>
             <CheckCircle className="w-8 h-8 text-green-500" />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-4">
+        <div className={`rounded-lg shadow-sm border p-4 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Absent</p>
-              <p className="text-2xl font-bold text-red-600">{stats.absent}</p>
+              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Absent</p>
+              <p className={`text-2xl font-bold ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>{stats.absent}</p>
             </div>
             <XCircle className="w-8 h-8 text-red-500" />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-4">
+        <div className={`rounded-lg shadow-sm border p-4 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Late</p>
-              <p className="text-2xl font-bold text-yellow-600">{stats.late}</p>
+              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Late</p>
+              <p className={`text-2xl font-bold ${isDarkMode ? 'text-yellow-400' : 'text-yellow-600'}`}>{stats.late}</p>
             </div>
             <Clock className="w-8 h-8 text-yellow-500" />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-4">
+        <div className={`rounded-lg shadow-sm border p-4 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Percentage</p>
-              <p className="text-2xl font-bold text-purple-600">{stats.percentage.toFixed(1)}%</p>
+              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Percentage</p>
+              <p className={`text-2xl font-bold ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`}>{stats.percentage.toFixed(1)}%</p>
             </div>
             <Calendar className="w-8 h-8 text-purple-500" />
           </div>
@@ -284,15 +287,15 @@ const StudentAttendance: React.FC = () => {
       </div>
 
       {/* Filter Tabs */}
-      <div className="mb-6 flex gap-2 border-b">
+      <div className={`flex gap-2 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
         {(['all', 'present', 'absent', 'late'] as const).map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
             className={`px-4 py-2 font-medium capitalize transition-colors ${
               filter === f
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
+                ? isDarkMode ? 'text-blue-400 border-b-2 border-blue-400' : 'text-blue-600 border-b-2 border-blue-600'
+                : isDarkMode ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 hover:text-gray-900'
             }`}
           >
             {f}
@@ -302,43 +305,43 @@ const StudentAttendance: React.FC = () => {
 
       {/* Attendance List */}
       {filteredRecords.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg shadow">
-          <Calendar className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-          <h3 className="text-xl font-medium text-gray-900 mb-2">No attendance records</h3>
-          <p className="text-gray-600">
+        <div className={`text-center py-12 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
+          <Calendar className={`w-16 h-16 mx-auto mb-4 ${isDarkMode ? 'text-gray-600' : 'text-gray-400'}`} />
+          <h3 className={`text-xl font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>No attendance records</h3>
+          <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
             {stats.total === 0 
               ? 'No attendance has been marked yet. Your teacher will mark attendance during class.' 
               : `You don't have any ${filter !== 'all' ? filter : ''} attendance records`}
           </p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className={`rounded-lg shadow-sm border overflow-hidden ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+              <thead className={`border-b ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-100'}`}>
                 <tr>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-900">Date</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-900">Status</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-900">Subject</th>
+                  <th className={`px-6 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Date</th>
+                  <th className={`px-6 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Status</th>
+                  <th className={`px-6 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Subject</th>
                 </tr>
               </thead>
-              <tbody className="divide-y">
+              <tbody className={`divide-y ${isDarkMode ? 'divide-gray-700' : 'divide-gray-100'}`}>
                 {filteredRecords.map((record: AttendanceRecord, index: number) => {
                   const isToday = record.date === new Date().toISOString().slice(0, 10);
                   return (
-                    <tr key={index} className={`hover:bg-gray-50 ${isToday ? 'bg-green-50' : ''}`}>
-                      <td className="px-6 py-4">
+                    <tr key={index} className={`${isDarkMode ? isToday ? 'bg-green-900' : 'hover:bg-gray-700' : isToday ? 'bg-green-50' : 'hover:bg-gray-50'}`}>
+                      <td className={`px-6 py-4 ${isDarkMode ? 'text-gray-300' : ''}`}>
                         <div className="flex flex-col">
-                          <span className={`text-sm font-medium ${isToday ? 'text-green-900' : 'text-gray-900'}`}>
+                          <span className={`text-sm font-medium ${isToday ? (isDarkMode ? 'text-green-300' : 'text-green-900') : (isDarkMode ? 'text-white' : 'text-gray-900')}`}>
                             {formatDate(record.date)}
                           </span>
-                          <span className="text-xs text-gray-500">{record.date}</span>
+                          <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>{record.date}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm">
                         {getStatusBadge(record.status)}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
+                      <td className={`px-6 py-4 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                         {record.subject || '-'}
                       </td>
                     </tr>
@@ -349,6 +352,7 @@ const StudentAttendance: React.FC = () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

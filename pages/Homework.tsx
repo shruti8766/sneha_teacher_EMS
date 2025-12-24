@@ -151,10 +151,10 @@ const Homework: React.FC = () => {
   };
 
   return (
-    <div className={`space-y-6 min-h-screen px-4 md:px-8 py-6 ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
+    <div className={`space-y-4 min-h-screen px-4 md:px-6 py-4 ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
       <div className="flex items-center justify-between">
-        <h1 className={`text-3xl font-bold flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-          <PenTool className="text-purple-600" size={36} />
+        <h1 className={`text-2xl font-bold flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+          <PenTool className="text-purple-600" size={28} />
           Homework
         </h1>
         {(user?.role === 'teacher' || user?.role === 'admin') && (
@@ -166,9 +166,9 @@ const Homework: React.FC = () => {
               setAssignmentMode('standard');
               setIsModalOpen(true);
             }}
-            className="bg-pink-600 text-white px-6 py-2.5 rounded-lg hover:bg-pink-700 transition flex items-center gap-2 font-medium shadow-sm"
+            className="bg-pink-600 text-white px-4 py-2 text-sm rounded-lg hover:bg-pink-700 transition flex items-center gap-2 font-medium shadow-sm"
           >
-            <Plus size={20} /> Assign Homework
+            <Plus size={18} /> Assign Homework
           </button>
         )}
       </div>
@@ -176,19 +176,19 @@ const Homework: React.FC = () => {
       {loading ? (
         <div className="flex justify-center p-8"><Loader2 className="animate-spin text-pink-600" /></div>
       ) : homeworkList.length === 0 ? (
-         <div className={`text-center p-8 rounded-xl border ${isDarkMode ? 'bg-gray-800 border-gray-700 text-gray-400' : 'bg-white border-gray-100 text-gray-500'}`}>No homework assigned yet.</div>
+         <div className={`text-center p-6 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-700 text-gray-400' : 'bg-white border-gray-100 text-gray-500'}`}>No homework assigned yet.</div>
       ) : (
         <div className="grid grid-cols-1 gap-4">
           {homeworkList.map(hw => (
             <div 
               key={hw.id} 
               onClick={() => handleViewHomework(hw)}
-              className={`p-6 rounded-xl shadow-sm border flex flex-col md:flex-row justify-between items-start md:items-center gap-4 cursor-pointer transition ${isDarkMode ? 'bg-gray-800 border-gray-700 hover:shadow-lg' : 'bg-white border-gray-100 hover:shadow-md'}`}>
+              className={`p-4 rounded-lg shadow-sm border flex flex-col md:flex-row justify-between items-start md:items-center gap-3 cursor-pointer transition ${isDarkMode ? 'bg-gray-800 border-gray-700 hover:shadow-lg' : 'bg-white border-gray-100 hover:shadow-md'}`}>
               <div className="space-y-1 flex-1">
-                <h3 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{hw.title}</h3>
-                <div className={`flex items-center gap-4 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  <span className="flex items-center gap-1"><BookOpen size={14} /> {hw.subject}</span>
-                  <span className="flex items-center gap-1"><Calendar size={14} /> Due: {new Date(hw.dueAt).toLocaleDateString()}</span>
+                <h3 className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{hw.title}</h3>
+                <div className={`flex items-center gap-4 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  <span className="flex items-center gap-1"><BookOpen size={12} /> {hw.subject}</span>
+                  <span className="flex items-center gap-1"><Calendar size={12} /> Due: {new Date(hw.dueAt).toLocaleDateString()}</span>
                 </div>
               </div>
               <div className="flex items-center gap-4">
@@ -205,14 +205,14 @@ const Homework: React.FC = () => {
                        className="text-blue-600 hover:text-blue-700 transition p-1"
                        title="Edit homework"
                      >
-                       <Edit2 size={18} />
+                       <Edit2 size={16} />
                      </button>
                      <button
                        onClick={() => handleDelete(hw.id)}
                        className="text-red-600 hover:text-red-700 transition p-1"
                        title="Delete homework"
                      >
-                       <Trash2 size={18} />
+                       <Trash2 size={16} />
                      </button>
                    </div>
                  )}
@@ -228,7 +228,7 @@ const Homework: React.FC = () => {
         setFormData({ title: '', subject: '', dueDate: '', description: '', board: '', standard: '' });
         setSelectedStudents([]);
         setAssignmentMode('standard');
-      }} title={editingId ? 'Edit Homework' : 'Assign Homework'}>
+      }} title={editingId ? 'Edit Homework' : 'Assign Homework'} isDarkMode={isDarkMode}>
         <form onSubmit={handleCreate} className="space-y-4">
           <div>
             <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Title *</label>

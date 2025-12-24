@@ -6,7 +6,7 @@ import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { useDarkMode } from '../context/DarkModeContext';
 import { useDetail } from '../context/DetailContext';
-import { Loader2, Mail, Phone, BookOpen, Users, Edit2, ArrowLeft, GraduationCap } from 'lucide-react';
+import { Loader2, Mail, Phone, BookOpen, Users, Edit2, ArrowLeft, GraduationCap, Lock, Eye, EyeOff, AlertCircle, Check } from 'lucide-react';
 import Modal from '../components/Modal';
 const TeachersDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -20,7 +20,18 @@ const TeachersDetail: React.FC = () => {
   const [batches, setBatches] = useState<Batch[]>([]);
   const [students, setStudents] = useState<(Student & { assignedSubjects: string[] })[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'batches' | 'students'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'batches' | 'students' | 'security'>('overview');
+
+  // Password state variables
+  const [teacherPasswordFromBackend, setTeacherPasswordFromBackend] = useState('');
+  const [showBackendPassword, setShowBackendPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    new: '',
+    confirm: ''
+  });
+  const [passwordSubmitting, setPasswordSubmitting] = useState(false);
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -132,6 +143,74 @@ const TeachersDetail: React.FC = () => {
     }
   };
 
+  const loadTeacherPassword = async () => {
+    if (!id) return;
+    try {
+      const response = await api.get<any>(`/teachers/${id}/password`);
+      setTeacherPasswordFromBackend(response.password || '');
+      if (!response.password) {
+        console.warn('⚠️ Password field is empty in database');
+      } else {
+        console.log('✅ Teacher password loaded successfully');
+      }
+    } catch (error: any) {
+      console.error('❌ Error loading password:', error);
+      showToast('Failed to load password', 'error');
+    }
+  };
+
+  const handlePasswordFormChange = (field: 'new' | 'confirm', value: string) => {
+    setPasswordForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleUpdateTeacherPassword = async () => {
+    if (!id) return;
+
+    if (!passwordForm.new || !passwordForm.confirm) {
+      showToast('Please fill in all password fields', 'error');
+      return;
+    }
+
+    if (passwordForm.new.length < 8) {
+      showToast('Password must be at least 8 characters', 'error');
+      return;
+    }
+
+    if (passwordForm.new !== passwordForm.confirm) {
+      showToast('New passwords do not match', 'error');
+      return;
+    }
+
+    setPasswordSubmitting(true);
+    try {
+      const payload = {
+        newPassword: passwordForm.new,
+      };
+      console.log('📤 Sending teacher password change request');
+      const response = await api.post(`/teachers/${id}/change-password`, payload);
+      console.log('✅ Password change response:', response);
+      
+      // Reload the current password display to show the new password
+      try {
+        const pwdResponse = await api.get<any>(`/teachers/${id}/password`);
+        if (pwdResponse && pwdResponse.password) {
+          setTeacherPasswordFromBackend(pwdResponse.password);
+          console.log('🔄 Teacher password display updated');
+        }
+      } catch (err) {
+        console.error('Failed to reload password display:', err);
+      }
+      
+      showToast('✅ Teacher password updated successfully!');
+      setPasswordForm({ new: '', confirm: '' });
+    } catch (error: any) {
+      console.error('❌ Error updating password:', error);
+      showToast(error.message || 'Failed to update teacher password. Please try again.', 'error');
+    } finally {
+      setPasswordSubmitting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -155,7 +234,7 @@ const TeachersDetail: React.FC = () => {
   }
 
   return (
-    <div className={`min-h-screen px-4 md:px-8 py-6 ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
+    <div className={`min-h-screen px-3 md:px-6 py-4 ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -166,29 +245,28 @@ const TeachersDetail: React.FC = () => {
             <ArrowLeft size={20} className={isDarkMode ? 'text-gray-400' : 'text-gray-600'} />
           </button>
           <div>
-            <h1 className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{teacher.name}</h1>
-            <p className={isDarkMode ? 'text-gray-500' : 'text-gray-500'}>Teacher ID: {teacher.id}</p>
+            <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{teacher.name}</h1>
           </div>
         </div>
         {user?.role === 'admin' && (
           <button
             onClick={() => setIsEditModalOpen(true)}
-            className="bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 transition flex items-center gap-2 font-medium shadow-sm"
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-1.5 font-medium shadow-sm text-sm"
           >
-            <Edit2 size={18} /> Edit Teacher
+            <Edit2 size={16} /> Edit Teacher
           </button>
         )}
       </div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-4">
         {/* Left Column - Overview */}
         <div className="lg:col-span-2 space-y-6">
           {/* Tabs */}
           <div className={`flex gap-2 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
             <button
               onClick={() => setActiveTab('overview')}
-              className={`px-4 py-3 font-medium transition-colors border-b-2 ${
+              className={`px-3 py-2 text-xs font-medium transition-colors border-b-2 ${
                 activeTab === 'overview'
                   ? 'border-blue-600 text-blue-600'
                   : `border-transparent ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`
@@ -198,7 +276,7 @@ const TeachersDetail: React.FC = () => {
             </button>
             <button
               onClick={() => setActiveTab('batches')}
-              className={`px-4 py-3 font-medium transition-colors border-b-2 ${
+              className={`px-3 py-2 text-xs font-medium transition-colors border-b-2 ${
                 activeTab === 'batches'
                   ? 'border-blue-600 text-blue-600'
                   : `border-transparent ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`
@@ -208,7 +286,7 @@ const TeachersDetail: React.FC = () => {
             </button>
             <button
               onClick={() => setActiveTab('students')}
-              className={`px-4 py-3 font-medium transition-colors border-b-2 ${
+              className={`px-3 py-2 text-xs font-medium transition-colors border-b-2 ${
                 activeTab === 'students'
                   ? 'border-blue-600 text-blue-600'
                   : `border-transparent ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`
@@ -216,29 +294,42 @@ const TeachersDetail: React.FC = () => {
             >
               Students ({students.length})
             </button>
+            <button
+              onClick={() => {
+                setActiveTab('security');
+                loadTeacherPassword();
+              }}
+              className={`px-3 py-2 text-xs font-medium transition-colors border-b-2 flex items-center gap-1.5 ${
+                activeTab === 'security'
+                  ? 'border-blue-600 text-blue-600'
+                  : `border-transparent ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`
+              }`}
+            >
+              <Lock size={14} /> Security
+            </button>
           </div>
 
           {/* Overview Tab */}
           {activeTab === 'overview' && (
-            <div className={`rounded-xl shadow-sm border p-6 space-y-6 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
+            <div className={`rounded-lg shadow-sm border p-4 space-y-4 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
               <div>
-                <h3 className={`text-sm font-semibold uppercase mb-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Personal Information</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <h3 className={`text-xs font-semibold uppercase mb-3 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Personal Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className={`text-xs uppercase font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Name</label>
-                    <p className={`text-lg font-medium mt-1 ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{teacher.name}</p>
+                    <p className={`text-sm font-medium mt-0.5 ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{teacher.name}</p>
                   </div>
                   <div>
-                    <label className={`text-xs uppercase font-medium flex items-center gap-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                      <Mail size={14} /> Email
+                    <label className={`text-xs uppercase font-medium flex items-center gap-1.5 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      <Mail size={12} /> Email
                     </label>
-                    <p className={`text-lg font-medium mt-1 ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{teacher.email}</p>
+                    <p className={`text-sm font-medium mt-0.5 ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{teacher.email}</p>
                   </div>
                   <div>
-                    <label className={`text-xs uppercase font-medium flex items-center gap-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                      <Phone size={14} /> Phone
+                    <label className={`text-xs uppercase font-medium flex items-center gap-1.5 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      <Phone size={12} /> Phone
                     </label>
-                    <p className={`text-lg font-medium mt-1 ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{teacher.phone || 'Not provided'}</p>
+                    <p className={`text-sm font-medium mt-0.5 ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{teacher.phone || 'Not provided'}</p>
                   </div>
                   <div>
                     <label className={`text-xs uppercase font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Status</label>
@@ -253,9 +344,9 @@ const TeachersDetail: React.FC = () => {
                 </div>
               </div>
 
-              <div className={`border-t pt-6 ${isDarkMode ? 'border-gray-700' : ''}`}>
-                <h3 className={`text-sm font-semibold uppercase mb-4 flex items-center gap-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                  <BookOpen size={16} /> Subjects Taught
+              <div className={`border-t pt-4 ${isDarkMode ? 'border-gray-700' : ''}`}>
+                <h3 className={`text-xs font-semibold uppercase mb-2 flex items-center gap-1.5 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  <BookOpen size={14} /> Subjects Taught
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {teacher.subjects && teacher.subjects.length > 0 ? (
@@ -277,35 +368,35 @@ const TeachersDetail: React.FC = () => {
 
           {/* Batches Tab */}
           {activeTab === 'batches' && (
-            <div className={`rounded-xl shadow-sm border overflow-hidden ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
+            <div className={`rounded-lg shadow-sm border overflow-hidden ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
               {batches.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
                     <thead className={`border-b ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-100'}`}>
                       <tr>
-                        <th className={`px-6 py-4 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Batch Name</th>
-                        <th className={`px-6 py-4 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Board</th>
-                        <th className={`px-6 py-4 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Standard</th>
-                        <th className={`px-6 py-4 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Subject</th>
-                        <th className={`px-6 py-4 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Students</th>
+                        <th className={`px-4 py-2.5 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Batch Name</th>
+                        <th className={`px-4 py-2.5 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Board</th>
+                        <th className={`px-4 py-2.5 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Standard</th>
+                        <th className={`px-4 py-2.5 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Subject</th>
+                        <th className={`px-4 py-2.5 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>Students</th>
                       </tr>
                     </thead>
                     <tbody className={`divide-y ${isDarkMode ? 'divide-gray-700' : 'divide-gray-100'}`}>
                       {batches.map(batch => (
                         <tr key={batch.id} className={`transition ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
-                          <td className="px-6 py-4">
-                            <div className={`font-medium ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{batch.name}</div>
+                          <td className="px-4 py-3">
+                            <div className={`text-sm font-medium ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>{batch.name}</div>
                           </td>
-                          <td className={`px-6 py-4 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{batch.board}</td>
-                          <td className={`px-6 py-4 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{batch.standard}</td>
-                          <td className="px-6 py-4">
-                            <span className={`px-2 py-1 rounded text-xs font-medium ${isDarkMode ? 'bg-purple-900 text-purple-300' : 'bg-purple-50 text-purple-700'}`}>
+                          <td className={`px-4 py-3 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{batch.board}</td>
+                          <td className={`px-4 py-3 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{batch.standard}</td>
+                          <td className="px-4 py-3">
+                            <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${isDarkMode ? 'bg-purple-900 text-purple-300' : 'bg-purple-50 text-purple-700'}`}>
                               {batch.subject}
                             </span>
                           </td>
-                          <td className="px-6 py-4">
-                            <div className={`flex items-center gap-1 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                              <Users size={14} />
+                          <td className="px-4 py-3">
+                            <div className={`flex items-center gap-1 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                              <Users size={12} />
                               {batch.studentIds?.length || 0} / {batch.maxStudents || '∞'}
                             </div>
                           </td>
@@ -325,28 +416,28 @@ const TeachersDetail: React.FC = () => {
 
           {/* Students Tab */}
           {activeTab === 'students' && (
-            <div className={`rounded-xl shadow-sm border p-6 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
+            <div className={`rounded-lg shadow-sm border p-4 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
               {students.length > 0 ? (
-                <div className="space-y-4">
-                  <div className="mb-6">
-                    <h3 className={`text-lg font-semibold flex items-center gap-2 mb-2 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-                      <GraduationCap size={20} className="text-blue-600" />
+                <div className="space-y-3">
+                  <div className="mb-4">
+                    <h3 className={`text-sm font-semibold flex items-center gap-1.5 mb-1 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                      <GraduationCap size={16} className="text-blue-600" />
                       Students Taught by {teacher?.name}
                     </h3>
-                    <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Students assigned to this teacher for specific subjects</p>
+                    <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Students assigned to this teacher for specific subjects</p>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {students.map(student => (
                       <div
                         key={student.id}
-                        className={`p-5 rounded-lg border transition-shadow cursor-pointer ${isDarkMode ? 'bg-blue-900 border-blue-700 hover:shadow-md' : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-md'}`}
+                        className={`p-3 rounded-lg border transition-shadow cursor-pointer ${isDarkMode ? 'bg-blue-900 border-blue-700 hover:shadow-md' : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-md'}`}
                         onClick={() => navigate(`/students/${student.id}`)}
                       >
-                        <div className="space-y-3">
+                        <div className="space-y-2">
                           <div>
-                            <h4 className={`text-lg font-semibold ${isDarkMode ? 'text-blue-200' : 'text-blue-900'}`}>{student.name}</h4>
-                            <p className={`text-sm ${isDarkMode ? 'text-blue-300' : 'text-blue-700'}`}>{student.board} - Standard {student.standard}</p>
+                            <h4 className={`text-sm font-semibold ${isDarkMode ? 'text-blue-200' : 'text-blue-900'}`}>{student.name}</h4>
+                            <p className={`text-xs ${isDarkMode ? 'text-blue-300' : 'text-blue-700'}`}>{student.board} - Standard {student.standard}</p>
                           </div>
                           
                           <div className={`bg-opacity-50 p-3 rounded border ${isDarkMode ? 'bg-blue-800 border-blue-600' : 'bg-white border-blue-200'}`}>
@@ -396,6 +487,118 @@ const TeachersDetail: React.FC = () => {
               )}
             </div>
           )}
+
+          {/* Security Tab */}
+          {activeTab === 'security' && (
+            <div className={`rounded-lg shadow-sm border p-6 space-y-6 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
+              <div>
+                <h3 className={`text-sm font-semibold mb-4 flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                  <Lock size={18} className="text-amber-600" /> Password Management
+                </h3>
+
+                <div className="space-y-4">
+                  {/* Current Password Display */}
+                  <div>
+                    <label className={`block text-xs font-semibold uppercase mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Current Password</label>
+                    <div className="relative flex items-center">
+                      <input
+                        type={showBackendPassword ? 'text' : 'password'}
+                        disabled
+                        value={teacherPasswordFromBackend}
+                        className={`w-full px-3 py-2 border rounded-lg outline-none text-sm ${isDarkMode ? 'bg-gray-700 border-gray-600 text-gray-300' : 'bg-gray-100 border-gray-300 text-gray-600'}`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowBackendPassword(!showBackendPassword)}
+                        className={`absolute right-3 p-1 transition ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}`}
+                      >
+                        {showBackendPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* New Password Input */}
+                  <div>
+                    <label className={`block text-xs font-semibold uppercase mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>New Password</label>
+                    <div className="relative flex items-center">
+                      <input
+                        type={showNewPassword ? 'text' : 'password'}
+                        value={passwordForm.new}
+                        onChange={(e) => handlePasswordFormChange('new', e.target.value)}
+                        placeholder="Minimum 8 characters"
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'}`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className={`absolute right-3 p-1 transition ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}`}
+                      >
+                        {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                    <div className={`flex items-center gap-1.5 mt-1.5 text-xs ${passwordForm.new.length >= 8 ? 'text-green-600' : isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      {passwordForm.new.length >= 8 ? <Check size={14} /> : <AlertCircle size={14} />}
+                      At least 8 characters
+                    </div>
+                  </div>
+
+                  {/* Confirm Password Input */}
+                  <div>
+                    <label className={`block text-xs font-semibold uppercase mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Confirm New Password</label>
+                    <div className="relative flex items-center">
+                      <input
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        value={passwordForm.confirm}
+                        onChange={(e) => handlePasswordFormChange('confirm', e.target.value)}
+                        placeholder="Re-enter new password"
+                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-500' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'}`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className={`absolute right-3 p-1 transition ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}`}
+                      >
+                        {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                    {passwordForm.confirm && passwordForm.new === passwordForm.confirm && (
+                      <div className={`flex items-center gap-1.5 mt-1.5 text-xs text-green-600`}>
+                        <Check size={14} /> Passwords match
+                      </div>
+                    )}
+                    {passwordForm.confirm && passwordForm.new !== passwordForm.confirm && (
+                      <div className={`flex items-center gap-1.5 mt-1.5 text-xs text-red-600`}>
+                        <AlertCircle size={14} /> Passwords do not match
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Update Button */}
+                  <button
+                    onClick={handleUpdateTeacherPassword}
+                    disabled={passwordSubmitting}
+                    className={`w-full mt-6 px-4 py-2.5 rounded-lg font-medium transition flex items-center justify-center gap-2 ${
+                      passwordSubmitting
+                        ? isDarkMode ? 'bg-gray-600 text-gray-300' : 'bg-gray-300 text-gray-500'
+                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                    }`}
+                  >
+                    {passwordSubmitting ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        Updating Password...
+                      </>
+                    ) : (
+                      <>
+                        <Check size={16} />
+                        Update Password
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="lg:col-span-1">
@@ -436,7 +639,7 @@ const TeachersDetail: React.FC = () => {
       </div>
 
       {/* Edit Teacher Modal */}
-      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit Teacher">
+      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit Teacher" isDarkMode={isDarkMode}>
         <form onSubmit={handleUpdateTeacher} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>

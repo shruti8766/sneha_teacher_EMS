@@ -405,3 +405,32 @@ export interface FeeInstallment {
   lateFee?: number;
   description?: string;
 }
+
+export type MeetingType = 'all_parents' | 'specific_parent' | 'other';
+
+export interface Meeting {
+  id: string;
+  title: string;
+  type: MeetingType;
+  date: string;
+  startTime: string;
+  endTime: string;
+  description?: string;
+  location?: string;
+  parentIds?: string[];
+  studentIds?: string[];
+  otherInfo?: string;
+  createdBy: string;
+  createdByName?: string;
+  createdAt?: any;
+  status: 'scheduled' | 'ongoing' | 'completed' | 'cancelled';
+}
+
+export interface MeetingComment {
+  id: string;
+  meetingId: string;
+  content: string;
+  createdBy: string;
+  createdByName?: string;
+  createdAt?: any;
+}

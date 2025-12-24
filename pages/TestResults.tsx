@@ -261,13 +261,13 @@ const TestResults: React.FC = () => {
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/tests')}
-            className="p-2 hover:bg-gray-100 rounded-lg transition"
+            className={`p-2 rounded-lg transition ${isDarkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-600'}`}
           >
-            <ArrowLeft size={20} className="text-gray-600" />
+            <ArrowLeft size={20} />
           </button>
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">{test.title || test.subject}</h1>
-            <p className="text-gray-500">
+            <h1 className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{test.title || test.subject}</h1>
+            <p className={isDarkMode ? 'text-gray-400' : 'text-gray-500'}>
               {test.board} • Standard {test.standard} • {test.totalMarks} marks
             </p>
           </div>
@@ -299,42 +299,42 @@ const TestResults: React.FC = () => {
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-xl p-6">
-          <p className="text-sm text-blue-700 uppercase font-medium mb-2">Total Students</p>
-          <p className="text-3xl font-bold text-blue-900">{stats.totalStudents}</p>
+        <div className={`rounded-xl p-6 border-2 ${isDarkMode ? 'bg-gradient-to-br from-blue-900 to-blue-800 border-blue-700' : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'}`}>
+          <p className={`text-sm uppercase font-medium mb-2 ${isDarkMode ? 'text-blue-300' : 'text-blue-700'}`}>Total Students</p>
+          <p className={`text-3xl font-bold ${isDarkMode ? 'text-blue-100' : 'text-blue-900'}`}>{stats.totalStudents}</p>
         </div>
-        <div className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-200 rounded-xl p-6">
-          <p className="text-sm text-green-700 uppercase font-medium mb-2">Results Submitted</p>
-          <p className="text-3xl font-bold text-green-900">{stats.submitted}</p>
-          <p className="text-xs text-green-600 mt-1">{stats.pending} pending</p>
+        <div className={`rounded-xl p-6 border-2 ${isDarkMode ? 'bg-gradient-to-br from-green-900 to-green-800 border-green-700' : 'bg-gradient-to-br from-green-50 to-green-100 border-green-200'}`}>
+          <p className={`text-sm uppercase font-medium mb-2 ${isDarkMode ? 'text-green-300' : 'text-green-700'}`}>Results Submitted</p>
+          <p className={`text-3xl font-bold ${isDarkMode ? 'text-green-100' : 'text-green-900'}`}>{stats.submitted}</p>
+          <p className={`text-xs mt-1 ${isDarkMode ? 'text-green-300' : 'text-green-600'}`}>{stats.pending} pending</p>
         </div>
-        <div className="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 rounded-xl p-6">
-          <p className="text-sm text-purple-700 uppercase font-medium mb-2">Average Score</p>
-          <p className="text-3xl font-bold text-purple-900">{stats.average.toFixed(2)}</p>
-          <p className="text-xs text-purple-600 mt-1">out of {test.totalMarks}</p>
+        <div className={`rounded-xl p-6 border-2 ${isDarkMode ? 'bg-gradient-to-br from-purple-900 to-purple-800 border-purple-700' : 'bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200'}`}>
+          <p className={`text-sm uppercase font-medium mb-2 ${isDarkMode ? 'text-purple-300' : 'text-purple-700'}`}>Average Score</p>
+          <p className={`text-3xl font-bold ${isDarkMode ? 'text-purple-100' : 'text-purple-900'}`}>{stats.average.toFixed(2)}</p>
+          <p className={`text-xs mt-1 ${isDarkMode ? 'text-purple-300' : 'text-purple-600'}`}>out of {test.totalMarks}</p>
         </div>
-        <div className="bg-gradient-to-br from-orange-50 to-orange-100 border-2 border-orange-200 rounded-xl p-6">
-          <p className="text-sm text-orange-700 uppercase font-medium mb-2">Highest / Lowest</p>
+        <div className={`rounded-xl p-6 border-2 ${isDarkMode ? 'bg-gradient-to-br from-orange-900 to-orange-800 border-orange-700' : 'bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200'}`}>
+          <p className={`text-sm uppercase font-medium mb-2 ${isDarkMode ? 'text-orange-300' : 'text-orange-700'}`}>Highest / Lowest</p>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1">
               <TrendingUp size={20} className="text-green-600" />
-              <span className="text-2xl font-bold text-green-900">{stats.highest}</span>
+              <span className={`text-2xl font-bold ${isDarkMode ? 'text-green-100' : 'text-green-900'}`}>{stats.highest}</span>
             </div>
-            <span className="text-gray-500">/</span>
+            <span className={isDarkMode ? 'text-gray-400' : 'text-gray-500'}>/</span>
             <div className="flex items-center gap-1">
               <TrendingDown size={20} className="text-red-600" />
-              <span className="text-2xl font-bold text-red-900">{stats.lowest}</span>
+              <span className={`text-2xl font-bold ${isDarkMode ? 'text-red-100' : 'text-red-900'}`}>{stats.lowest}</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Results Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-800">Test Results</h2>
+      <div className={`rounded-xl shadow-sm border overflow-hidden ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
+        <div className={`p-6 flex items-center justify-between ${isDarkMode ? 'border-gray-700' : 'border-gray-200'} border-b`}>
+          <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Test Results</h2>
           {results.length > 0 && (
-            <button className="text-blue-600 hover:text-blue-700 flex items-center gap-2 text-sm font-medium">
+            <button className={`flex items-center gap-2 text-sm font-medium ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'}`}>
               <Download size={16} /> Export Results
             </button>
           )}
@@ -342,56 +342,56 @@ const TestResults: React.FC = () => {
         {results.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left">
-              <thead className="bg-gray-50 border-b border-gray-100">
+              <thead className={`border-b ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-100'}`}>
                 <tr>
-                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Rank</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Student Name</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Marks</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Percentage</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Grade</th>
-                  <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Remarks</th>
+                  <th className={`px-6 py-4 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Rank</th>
+                  <th className={`px-6 py-4 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Student Name</th>
+                  <th className={`px-6 py-4 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Marks</th>
+                  <th className={`px-6 py-4 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Percentage</th>
+                  <th className={`px-6 py-4 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Grade</th>
+                  <th className={`px-6 py-4 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Remarks</th>
                   {isAdmin && (
-                    <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                    <th className={`px-6 py-4 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Actions</th>
                   )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className={`divide-y ${isDarkMode ? 'divide-gray-700' : 'divide-gray-100'}`}>
                 {results.map(result => (
-                  <tr key={result.id} className="hover:bg-gray-50 transition">
+                  <tr key={result.id} className={`transition ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         {result.rank === 1 && <Award size={20} className="text-yellow-500" />}
                         {result.rank === 2 && <Award size={20} className="text-gray-400" />}
                         {result.rank === 3 && <Award size={20} className="text-orange-600" />}
-                        <span className="font-bold text-gray-900">{result.rank}</span>
+                        <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{result.rank}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div>
-                        <div className="font-medium text-gray-900">{result.studentName || 'Unknown'}</div>
-                        <div className="text-xs text-gray-500">{result.studentEmail}</div>
+                        <div className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{result.studentName || 'Unknown'}</div>
+                        <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{result.studentEmail}</div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="font-bold text-gray-900">
+                      <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                         {result.marksObtained} / {result.totalMarks}
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="w-full bg-gray-200 rounded-full h-2 relative">
+                      <div className={`w-full rounded-full h-2 relative ${isDarkMode ? 'bg-gray-600' : 'bg-gray-200'}`}>
                         <div
                           className="bg-gradient-to-r from-purple-500 to-purple-600 h-2 rounded-full"
                           style={{ width: `${result.percentage}%` }}
                         />
                       </div>
-                      <span className="text-sm text-gray-600 mt-1">{result.percentage?.toFixed(1)}%</span>
+                      <span className={`text-sm mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{result.percentage?.toFixed(1)}%</span>
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-3 py-1 rounded-full text-xs font-bold ${getGradeColor(result.gradeLetter || '')}`}>
                         {result.gradeLetter}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
+                    <td className={`px-6 py-4 text-sm max-w-xs truncate ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                       {result.remarks || '-'}
                     </td>
                     {isAdmin && (
@@ -399,14 +399,14 @@ const TestResults: React.FC = () => {
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleEditResult(result)}
-                            className="text-blue-600 hover:text-blue-700 p-1"
+                            className={`p-1 ${isDarkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'}`}
                             title="Edit result"
                           >
                             <Edit2 size={16} />
                           </button>
                           <button
                             onClick={() => handleDeleteResult(result.id)}
-                            className="text-red-600 hover:text-red-700 p-1"
+                            className={`p-1 ${isDarkMode ? 'text-red-400 hover:text-red-300' : 'text-red-600 hover:text-red-700'}`}
                             title="Delete result"
                           >
                             <Trash2 size={16} />
@@ -420,14 +420,14 @@ const TestResults: React.FC = () => {
             </table>
           </div>
         ) : (
-          <div className="p-12 text-center text-gray-500">
-            <FileText size={48} className="mx-auto mb-4 text-gray-300" />
+          <div className={`p-12 text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+            <FileText size={48} className={`mx-auto mb-4 ${isDarkMode ? 'text-gray-600' : 'text-gray-300'}`} />
             <p className="font-medium mb-2">No results submitted yet</p>
             <p className="text-sm">Add results for students who appeared in this test</p>
             {isAdmin && (
               <button
                 onClick={() => setIsResultModalOpen(true)}
-                className="mt-4 text-purple-600 hover:text-purple-700 font-medium"
+                className={`mt-4 font-medium ${isDarkMode ? 'text-purple-400 hover:text-purple-300' : 'text-purple-600 hover:text-purple-700'}`}
               >
                 Add First Result
               </button>
@@ -444,14 +444,15 @@ const TestResults: React.FC = () => {
           setEditingResult(null);
         }}
         title={editingResult ? 'Edit Result' : 'Add Test Result'}
+        isDarkMode={isDarkMode}
       >
         <form onSubmit={handleSubmitResult} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Student *</label>
+            <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Student *</label>
             <select
               required
               disabled={!!editingResult}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none bg-white text-gray-900"
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
               value={resultForm.studentId}
               onChange={e => setResultForm({...resultForm, studentId: e.target.value})}
             >
@@ -465,7 +466,7 @@ const TestResults: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
               Marks Obtained * (out of {test.totalMarks})
             </label>
             <input
@@ -474,7 +475,7 @@ const TestResults: React.FC = () => {
               min="0"
               max={test.totalMarks}
               step="0.5"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none bg-white text-gray-900"
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
               value={resultForm.marksObtained}
               onChange={e => setResultForm({...resultForm, marksObtained: e.target.value})}
               placeholder="Enter marks"
@@ -482,24 +483,24 @@ const TestResults: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Remarks</label>
+            <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Remarks</label>
             <textarea
               rows={3}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none bg-white text-gray-900"
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
               value={resultForm.remarks}
               onChange={e => setResultForm({...resultForm, remarks: e.target.value})}
               placeholder="Optional comments about performance"
             />
           </div>
 
-          <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+          <div className={`flex justify-end gap-3 mt-6 pt-4 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
             <button
               type="button"
               onClick={() => {
                 setIsResultModalOpen(false);
                 setEditingResult(null);
               }}
-              className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition"
+              className={`px-4 py-2 rounded-lg transition ${isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-100'}`}
             >
               Cancel
             </button>
@@ -519,18 +520,19 @@ const TestResults: React.FC = () => {
         isOpen={isBulkModalOpen}
         onClose={() => setIsBulkModalOpen(false)}
         title="Bulk Results Entry"
+        isDarkMode={isDarkMode}
       >
         <form onSubmit={handleBulkSubmit} className="space-y-4">
-          <p className="text-sm text-gray-600">
+          <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
             Enter marks for all students at once. You can leave marks as 0 for absent students.
           </p>
           
-          <div className="max-h-96 overflow-y-auto border border-gray-200 rounded-lg p-4 space-y-3">
+          <div className={`max-h-96 overflow-y-auto rounded-lg p-4 space-y-3 border ${isDarkMode ? 'border-gray-600 bg-gray-700' : 'border-gray-200 bg-gray-50'}`}>
             {bulkResults.map((result, index) => {
               const student = students.find(s => s.id === result.studentId);
               return (
-                <div key={index} className="grid grid-cols-12 gap-2 items-center bg-gray-50 p-3 rounded-lg">
-                  <div className="col-span-5 text-sm font-medium text-gray-900">
+                <div key={index} className={`grid grid-cols-12 gap-2 items-center p-3 rounded-lg ${isDarkMode ? 'bg-gray-600' : 'bg-gray-50'}`}>
+                  <div className={`col-span-5 text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                     {student?.name || 'Unknown'}
                   </div>
                   <input
@@ -538,14 +540,14 @@ const TestResults: React.FC = () => {
                     min="0"
                     max={test.totalMarks}
                     step="0.5"
-                    className="col-span-3 px-3 py-1.5 border border-gray-300 rounded text-sm"
+                    className={`col-span-3 px-3 py-1.5 border rounded text-sm ${isDarkMode ? 'bg-gray-700 border-gray-500 text-white' : 'bg-white border-gray-300'}`}
                     value={result.marksObtained}
                     onChange={e => updateBulkResult(index, 'marksObtained', parseFloat(e.target.value) || 0)}
                     placeholder="Marks"
                   />
                   <input
                     type="text"
-                    className="col-span-4 px-3 py-1.5 border border-gray-300 rounded text-sm"
+                    className={`col-span-4 px-3 py-1.5 border rounded text-sm ${isDarkMode ? 'bg-gray-700 border-gray-500 text-white' : 'bg-white border-gray-300'}`}
                     value={result.remarks}
                     onChange={e => updateBulkResult(index, 'remarks', e.target.value)}
                     placeholder="Remarks (optional)"
@@ -555,11 +557,11 @@ const TestResults: React.FC = () => {
             })}
           </div>
 
-          <div className="flex justify-end gap-3 mt-6 pt-4 border-t">
+          <div className={`flex justify-end gap-3 mt-6 pt-4 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
             <button
               type="button"
               onClick={() => setIsBulkModalOpen(false)}
-              className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition"
+              className={`px-4 py-2 rounded-lg transition ${isDarkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-600 hover:bg-gray-100'}`}
             >
               Cancel
             </button>

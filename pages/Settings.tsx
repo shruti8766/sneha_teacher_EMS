@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Lock, Bell, Eye, Smartphone, LogOut, AlertCircle, Check, Loader2 } from 'lucide-react';
+import { Settings as SettingsIcon, Lock, Bell, Eye, EyeOff, Smartphone, LogOut, AlertCircle, Check, Loader2 } from 'lucide-react';
 import { api } from '../services/api';
 import { useDarkMode } from '../context/DarkModeContext';
+import { pushNotifications } from '../services/pushNotifications';
 
 interface SettingsData {
   emailNotifications: boolean;
@@ -26,13 +27,18 @@ const Settings: React.FC = () => {
     sessionTimeout: '30',
   });
   const [showSaveMessage, setShowSaveMessage] = useState(false);
+  const [currentPasswordFromBackend, setCurrentPasswordFromBackend] = useState('');
+  const [showBackendPassword, setShowBackendPassword] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordData, setPasswordData] = useState({
     current: '',
     new: '',
     confirm: '',
   });
 
-  // Load settings on mount
+  // Load settings and current password on mount
   useEffect(() => {
     const loadSettings = async () => {
       try {
@@ -57,14 +63,84 @@ const Settings: React.FC = () => {
         console.error('Failed to load settings:', error);
       }
     };
+    
+    const loadCurrentPassword = async () => {
+      try {
+        console.log('🔐 Fetching current password from backend...');
+        const response = await api.get<any>('/users/current-password');
+        console.log('📥 Password response:', response);
+        
+        if (response && response.password !== undefined) {
+          if (response.password === '') {
+            setCurrentPasswordFromBackend('[Not set - Please change password once]');
+            console.log('⚠️ Password field is empty in database');
+          } else {
+            setCurrentPasswordFromBackend(response.password);
+            console.log('✅ Current password loaded successfully');
+          }
+        } else {
+          setCurrentPasswordFromBackend('[Unable to load]');
+          console.error('❌ Invalid response format:', response);
+        }
+      } catch (error) {
+        console.error('❌ Failed to load current password:', error);
+        setCurrentPasswordFromBackend('[Error loading password]');
+      }
+    };
+    
     loadSettings();
+    loadCurrentPassword();
   }, []);
 
-  const handleToggle = (key: string) => {
+  const handleToggle = async (key: string) => {
+    const newValue = !settings[key];
+    
     setSettings(prev => ({
       ...prev,
-      [key]: !prev[key]
+      [key]: newValue
     }));
+
+    // Handle push notification permission
+    if (key === 'pushNotifications' && newValue) {
+      try {
+        // Register service worker first
+        await pushNotifications.registerServiceWorker();
+        
+        // Request permission
+        const permission = await pushNotifications.requestPermission();
+        
+        if (permission !== 'granted') {
+          // User denied permission, revert the toggle
+          setSettings(prev => ({
+            ...prev,
+            pushNotifications: false
+          }));
+          alert('⚠️ Browser notification permission denied. Please enable it in your browser settings to receive push notifications.');
+          return;
+        }
+        
+        // Subscribe to push notifications
+        const subscription = await pushNotifications.subscribe();
+        console.log('✅ Push notification subscription:', subscription);
+        
+        alert('✅ Push notifications enabled! You will now receive browser notifications.');
+      } catch (error) {
+        console.error('❌ Failed to enable push notifications:', error);
+        setSettings(prev => ({
+          ...prev,
+          pushNotifications: false
+        }));
+        alert('❌ Failed to enable push notifications. Please check your browser settings.');
+      }
+    } else if (key === 'pushNotifications' && !newValue) {
+      // User disabled push notifications
+      try {
+        await pushNotifications.unsubscribe();
+        console.log('✅ Unsubscribed from push notifications');
+      } catch (error) {
+        console.error('❌ Failed to unsubscribe:', error);
+      }
+    }
   };
 
   const handleSaveSettings = async () => {
@@ -98,12 +174,20 @@ const Settings: React.FC = () => {
   };
 
   const handleUpdatePassword = async () => {
+    if (!passwordData.current) {
+      alert('Please enter your current password!');
+      return;
+    }
     if (passwordData.new !== passwordData.confirm) {
-      alert('Passwords do not match!');
+      alert('New passwords do not match!');
       return;
     }
     if (passwordData.new.length < 8) {
-      alert('Password must be at least 8 characters long!');
+      alert('New password must be at least 8 characters long!');
+      return;
+    }
+    if (passwordData.current === passwordData.new) {
+      alert('New password must be different from current password!');
       return;
     }
     try {
@@ -116,11 +200,22 @@ const Settings: React.FC = () => {
       const response = await api.post('/users/change-password', payload);
       console.log('✅ Password change response:', response);
       
-      alert('Password updated successfully!');
+      // Reload the current password display to show the new password
+      try {
+        const pwdResponse = await api.get<any>('/users/current-password');
+        if (pwdResponse && pwdResponse.password) {
+          setCurrentPasswordFromBackend(pwdResponse.password);
+          console.log('🔄 Current password display updated');
+        }
+      } catch (err) {
+        console.error('Failed to reload password display:', err);
+      }
+      
+      alert('✅ Password updated successfully!');
       setPasswordData({ current: '', new: '', confirm: '' });
     } catch (error) {
       console.error('❌ Error updating password:', error);
-      alert('Failed to update password. Please check your current password.');
+      alert('Failed to update password. Please check your current password is correct.');
     } finally {
       setIsLoading(false);
     }
@@ -143,7 +238,6 @@ const Settings: React.FC = () => {
           { id: 'account', label: 'Account', icon: SettingsIcon },
           { id: 'security', label: 'Security', icon: Lock },
           { id: 'notifications', label: 'Notifications', icon: Bell },
-          { id: 'privacy', label: 'Privacy', icon: Eye },
         ].map(tab => (
           <button
             key={tab.id}
@@ -244,51 +338,118 @@ const Settings: React.FC = () => {
         <div className={`rounded-xl shadow-sm border p-8 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
           <h2 className={`text-2xl font-bold mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Security Settings</h2>
 
-          <div className="space-y-8">
+          <div className="space-y-6">
             {/* Change Password */}
             <div>
-              <h3 className={`font-semibold mb-4 flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                <Lock size={18} className="text-red-600" />
+              <h3 className={`font-semibold mb-6 flex items-center gap-2 text-lg ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                <Lock size={20} className="text-red-600" />
                 Change Password
               </h3>
               <div className="space-y-4">
+                {/* Current Password Display */}
                 <div>
-                  <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Current Password</label>
-                  <input
-                    type="password"
-                    name="current"
-                    value={passwordData.current}
-                    onChange={handlePasswordChange}
-                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
-                    placeholder="Enter current password"
-                  />
+                  <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    <span className="flex items-center gap-2">
+                      Current Password
+                      <span className={`text-xs font-normal ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>(View only)</span>
+                    </span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showBackendPassword ? 'text' : 'password'}
+                      value={currentPasswordFromBackend}
+                      disabled
+                      className={`w-full px-4 py-2 border rounded-lg cursor-not-allowed pr-12 font-mono ${isDarkMode ? 'bg-gray-700 border-gray-600 text-gray-300' : 'bg-gray-100 border-gray-200 text-gray-700'}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowBackendPassword(!showBackendPassword)}
+                      className={`absolute right-3 top-1/2 transform -translate-y-1/2 transition ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}
+                      title={showBackendPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showBackendPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                  <p className={`text-xs mt-2 flex items-start gap-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                    <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
+                    <span>This is your current password stored in the system. Click the eye icon to reveal it.</span>
+                  </p>
                 </div>
+                
+                {/* Verify Current Password */}
                 <div>
-                  <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>New Password</label>
-                  <input
-                    type="password"
-                    name="new"
-                    value={passwordData.new}
-                    onChange={handlePasswordChange}
-                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
-                    placeholder="Enter new password"
-                  />
+                  <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Verify Current Password <span className="text-red-500">*</span></label>
+                  <div className="relative">
+                    <input
+                      type={showCurrentPassword ? 'text' : 'password'}
+                      name="current"
+                      value={passwordData.current}
+                      onChange={handlePasswordChange}
+                      className={`w-full px-4 py-2 border rounded-lg pr-12 focus:outline-none focus:ring-2 focus:ring-red-500 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
+                      placeholder="Enter your current password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      className={`absolute right-3 top-1/2 transform -translate-y-1/2 transition ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}
+                      title={showCurrentPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
+
+                {/* New Password */}
                 <div>
-                  <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Confirm New Password</label>
-                  <input
-                    type="password"
-                    name="confirm"
-                    value={passwordData.confirm}
-                    onChange={handlePasswordChange}
-                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
-                    placeholder="Confirm new password"
-                  />
+                  <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>New Password <span className="text-red-500">*</span></label>
+                  <div className="relative">
+                    <input
+                      type={showNewPassword ? 'text' : 'password'}
+                      name="new"
+                      value={passwordData.new}
+                      onChange={handlePasswordChange}
+                      className={`w-full px-4 py-2 border rounded-lg pr-12 focus:outline-none focus:ring-2 focus:ring-red-500 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
+                      placeholder="Minimum 8 characters"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className={`absolute right-3 top-1/2 transform -translate-y-1/2 transition ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}
+                      title={showNewPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
+
+                {/* Confirm Password */}
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Confirm Password <span className="text-red-500">*</span></label>
+                  <div className="relative">
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      name="confirm"
+                      value={passwordData.confirm}
+                      onChange={handlePasswordChange}
+                      className={`w-full px-4 py-2 border rounded-lg pr-12 focus:outline-none focus:ring-2 focus:ring-red-500 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
+                      placeholder="Re-enter new password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className={`absolute right-3 top-1/2 transform -translate-y-1/2 transition ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'}`}
+                      title={showConfirmPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Update Button */}
                 <button
                   onClick={handleUpdatePassword}
                   disabled={isLoading}
-                  className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="mt-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium w-full"
                 >
                   {isLoading ? <Loader2 className="animate-spin" size={18} /> : <Check size={18} />}
                   {isLoading ? 'Updating...' : 'Update Password'}
@@ -297,7 +458,7 @@ const Settings: React.FC = () => {
             </div>
 
             {/* Two-Factor Authentication */}
-            <div className={`border-t pt-8 ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+            <div className={`border-t pt-6 ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className={`font-semibold flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -388,63 +549,7 @@ const Settings: React.FC = () => {
         </div>
       )}
 
-      {/* Privacy Settings */}
-      {activeTab === 'privacy' && (
-        <div className={`rounded-xl shadow-sm border p-8 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
-          <h2 className={`text-2xl font-bold mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Privacy Settings</h2>
-
-          <div className="space-y-4">
-            <div className={`flex items-center justify-between p-4 border rounded-lg transition ${isDarkMode ? 'bg-gray-700 border-gray-600 hover:bg-gray-600' : 'bg-white border-gray-100 hover:bg-gray-50'}`}>
-              <div>
-                <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Public Profile</p>
-                <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Allow others to view your profile</p>
-              </div>
-              <button
-                onClick={() => handleToggle('publicProfile')}
-                className={`relative inline-flex h-8 w-16 items-center rounded-full transition-colors ${
-                  settings.publicProfile ? 'bg-blue-600' : isDarkMode ? 'bg-gray-600' : 'bg-gray-300'
-                }`}
-              >
-                <span
-                  className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
-                    settings.publicProfile ? 'translate-x-9' : 'translate-x-1'
-                  }`}
-                />
-              </button>
-            </div>
-
-            {/* Danger Zone */}
-            <div className={`mt-8 pt-8 border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-              <h3 className={`font-semibold mb-4 flex items-center gap-2 ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>
-                <AlertCircle size={18} />
-                Danger Zone
-              </h3>
-
-              <div className="space-y-3">
-                <button className={`w-full px-6 py-3 border-2 rounded-lg transition font-medium flex items-center gap-2 justify-center ${isDarkMode ? 'border-red-700 text-red-400 hover:bg-red-900' : 'border-red-200 text-red-600 hover:bg-red-50'}`}>
-                  <LogOut size={18} />
-                  Logout All Sessions
-                </button>
-                <button className={`w-full px-6 py-3 border-2 rounded-lg transition font-medium flex items-center gap-2 justify-center ${isDarkMode ? 'border-red-600 text-red-400 hover:bg-red-900' : 'border-red-600 text-red-600 hover:bg-red-50'}`}>
-                  <AlertCircle size={18} />
-                  Delete Account
-                </button>
-              </div>
-
-              <p className={`text-sm mt-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>⚠️ These actions cannot be undone. Please proceed with caution.</p>
-            </div>
-          </div>
-
-          <button
-            onClick={handleSaveSettings}
-            disabled={isLoading}
-            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed mt-6 w-full sm:w-auto"
-          >
-            {isLoading ? <Loader2 className="animate-spin" size={18} /> : <Check size={18} />}
-            {isLoading ? 'Saving...' : 'Save Settings'}
-          </button>
-        </div>
-      )}
+      
     </div>
   );
 };

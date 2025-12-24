@@ -126,18 +126,18 @@ const Students: React.FC = () => {
   };
 
   return (
-    <div className={`space-y-6 min-h-screen px-4 md:px-8 py-6 ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <h1 className={`text-3xl font-bold flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-          <Users className="text-blue-600" size={36} />
+    <div className={`space-y-4 min-h-screen px-3 md:px-6 py-4 ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
+      <div className="flex items-center justify-between">
+        <h1 className={`text-2xl font-bold flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+          <Users className="text-blue-600" size={28} />
           Students
         </h1>
         {user?.role === 'admin' && (
           <button
             onClick={() => setIsModalOpen(true)}
-            className="bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 transition flex items-center gap-2 font-medium shadow-sm"
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-1.5 font-medium shadow-sm text-sm"
           >
-            <Plus size={20} /> Add Student
+            <Plus size={18} /> Add Student
           </button>
         )}
       </div>
@@ -191,23 +191,23 @@ const Students: React.FC = () => {
       </div>
 
       {/* Table */}
-      <div className={`rounded-xl shadow-sm border overflow-hidden ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
+      <div className={`rounded-lg shadow-sm border overflow-hidden ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
         {loading ? (
-          <div className="p-8 flex justify-center">
-            <Loader2 className="animate-spin text-blue-500" size={32} />
+          <div className="p-6 flex justify-center">
+            <Loader2 className="animate-spin text-blue-500" size={24} />
           </div>
         ) : displayedStudents.length === 0 ? (
-          <div className={`p-8 text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>No matching students found.</div>
+          <div className={`p-6 text-center text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>No matching students found.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead className={`border-b ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-100'}`}>
                 <tr>
-                  <th className={`px-6 py-4 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Name</th>
-                  <th className={`px-6 py-4 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Board</th>
-                  <th className={`px-6 py-4 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Standard</th>
-                  <th className={`px-6 py-4 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Status</th>
-                  {user?.role === 'admin' && <th className={`px-6 py-4 text-xs font-semibold uppercase text-right ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Action</th>}
+                  <th className={`px-4 py-2.5 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Name</th>
+                  <th className={`px-4 py-2.5 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Board</th>
+                  <th className={`px-4 py-2.5 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Standard</th>
+                  <th className={`px-4 py-2.5 text-xs font-semibold uppercase ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Status</th>
+                  {user?.role === 'admin' && <th className={`px-4 py-2.5 text-xs font-semibold uppercase text-right ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Action</th>}
                 </tr>
               </thead>
               <tbody className={`divide-y ${isDarkMode ? 'divide-gray-700' : 'divide-gray-100'}`}>
@@ -217,27 +217,27 @@ const Students: React.FC = () => {
                     onClick={() => navigate(`/students/${student.id}`)}
                     className={`transition cursor-pointer ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}
                   >
-                    <td className="px-6 py-4">
-                      <div className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{student.name}</div>
+                    <td className="px-4 py-3">
+                      <div className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{student.name}</div>
                       <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{student.email}</div>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${isDarkMode ? 'bg-blue-900 text-blue-300' : 'bg-blue-50 text-blue-700'}`}>{student.board}</span>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${isDarkMode ? 'bg-blue-900 text-blue-300' : 'bg-blue-50 text-blue-700'}`}>{student.board}</span>
                     </td>
-                    <td className={`px-6 py-4 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{student.standard}</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${student.active ? (isDarkMode ? 'bg-green-900 text-green-300' : 'bg-green-50 text-green-700') : (isDarkMode ? 'bg-red-900 text-red-300' : 'bg-red-50 text-red-700')}`}>
+                    <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{student.standard}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${student.active ? (isDarkMode ? 'bg-green-900 text-green-300' : 'bg-green-50 text-green-700') : (isDarkMode ? 'bg-red-900 text-red-300' : 'bg-red-50 text-red-700')}`}>
                         {student.active ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     {user?.role === 'admin' && (
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-4 py-3 text-right">
                         <button
                           onClick={(e) => handleDelete(student.id, student.name, e)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-lg transition"
                           title="Delete student"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={14} />
                         </button>
                       </td>
                     )}
@@ -250,7 +250,7 @@ const Students: React.FC = () => {
       </div>
 
       {/* Add Student Modal */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add New Student">
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add New Student" isDarkMode={isDarkMode}>
         <form onSubmit={handleCreate} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>

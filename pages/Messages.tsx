@@ -374,7 +374,7 @@ const Messages: React.FC = () => {
                       {message.priority.toUpperCase()}
                     </span>
                   </div>
-                  <p className={`mb-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{message.content}</p>
+                  <div className={`mb-3 whitespace-pre-line leading-relaxed ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{message.content}</div>
                   <div className={`flex flex-wrap items-center gap-4 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                     <div className="flex items-center gap-1">
                       <Users size={14} />
@@ -425,8 +425,9 @@ const Messages: React.FC = () => {
           resetForm();
         }}
         title={editingMessage ? 'Edit Message' : 'Send New Message'}
+        isDarkMode={isDarkMode}
       >
-        <form onSubmit={handleCreateMessage} className="space-y-4">
+        <form onSubmit={handleCreateMessage} className="space-y-4"> 
           <div>
             <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Title *</label>
             <input

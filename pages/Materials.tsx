@@ -163,8 +163,8 @@ const Materials: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className={`text-3xl font-bold flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-            <BookOpen className="text-cyan-600" size={36} />
+          <h1 className={`text-2xl font-bold flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+            <BookOpen className="text-cyan-600" size={28} />
             Syllabus Browser
           </h1>
           <p className={`mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Browse course syllabus by board, class, and subject</p>
@@ -238,26 +238,26 @@ const Materials: React.FC = () => {
       )}
 
       {/* Content Area */}
-      <div className={`rounded-xl shadow-sm border p-6 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
+      <div className={`rounded-lg shadow-sm border p-4 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
         {loading ? (
-          <div className="flex justify-center items-center py-20">
-            <Loader2 className={`animate-spin ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} size={40} />
+          <div className="flex justify-center items-center py-12">
+            <Loader2 className={`animate-spin ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} size={32} />
             </div>
           ) : view === 'boards' ? (
             <div>
-              <h2 className={`text-2xl font-bold mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Select Board</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <h2 className={`text-xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Select Board</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                 {boards.map((board) => (
                   <div
                     key={board}
                     onClick={() => handleBoardClick(board)}
-                    className={`border rounded-lg p-5 transition cursor-pointer group ${isDarkMode ? 'bg-gray-700 border-gray-600 hover:border-blue-500 hover:shadow-lg' : 'bg-white border-gray-200 hover:border-blue-300 hover:shadow-lg'}`}
+                    className={`border rounded-lg p-3 transition cursor-pointer group ${isDarkMode ? 'bg-gray-700 border-gray-600 hover:border-blue-500 hover:shadow-lg' : 'bg-white border-gray-200 hover:border-blue-300 hover:shadow-lg'}`}
                   >
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isDarkMode ? 'bg-blue-900 text-blue-400' : 'bg-blue-100 text-blue-600'}`}>
-                        <Book size={20} />
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDarkMode ? 'bg-blue-900 text-blue-400' : 'bg-blue-100 text-blue-600'}`}>
+                        <Book size={18} />
                       </div>
-                      <h3 className={`text-lg font-semibold transition ${isDarkMode ? 'text-white group-hover:text-blue-400' : 'text-gray-900 group-hover:text-blue-600'}`}>{board}</h3>
+                      <h3 className={`text-sm font-semibold transition ${isDarkMode ? 'text-white group-hover:text-blue-400' : 'text-gray-900 group-hover:text-blue-600'}`}>{board}</h3>
                     </div>
                     <div className={`flex items-center text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                       <span>View classes</span>
@@ -269,15 +269,15 @@ const Materials: React.FC = () => {
             </div>
           ) : view === 'classes' ? (
             <div>
-              <h2 className={`text-2xl font-bold mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Select Class</h2>
-              <div className="grid grid-cols-3 md:grid-cols-6 lg:grid-cols-8 gap-3">
+              <h2 className={`text-xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Select Class</h2>
+              <div className="grid grid-cols-3 md:grid-cols-6 lg:grid-cols-8 gap-2">
                 {classes.map((cls) => (
                   <div
                     key={cls}
                     onClick={() => handleClassClick(cls)}
-                    className={`border rounded-lg p-4 transition cursor-pointer text-center group ${isDarkMode ? 'bg-gray-700 border-gray-600 hover:border-purple-500 hover:shadow-lg' : 'bg-white border-gray-200 hover:border-purple-300 hover:shadow-lg'}`}
+                    className={`border rounded-lg p-3 transition cursor-pointer text-center group ${isDarkMode ? 'bg-gray-700 border-gray-600 hover:border-purple-500 hover:shadow-lg' : 'bg-white border-gray-200 hover:border-purple-300 hover:shadow-lg'}`}
                   >
-                    <div className={`text-3xl font-bold mb-1 group-hover:scale-110 transition-transform ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`}>{cls}</div>
+                    <div className={`text-2xl font-bold mb-1 group-hover:scale-110 transition-transform ${isDarkMode ? 'text-purple-400' : 'text-purple-600'}`}>{cls}</div>
                     <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Class {cls}</div>
                   </div>
                 ))}
@@ -285,19 +285,19 @@ const Materials: React.FC = () => {
             </div>
           ) : view === 'subjects' ? (
             <div>
-              <h2 className={`text-2xl font-bold mb-6 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Select Subject</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <h2 className={`text-xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Select Subject</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {subjects.map((subject) => (
                   <div
                     key={subject}
                     onClick={() => handleSubjectClick(subject)}
-                    className={`border rounded-lg p-5 transition cursor-pointer group ${isDarkMode ? 'bg-gray-700 border-gray-600 hover:border-green-500 hover:shadow-lg' : 'bg-white border-gray-200 hover:border-green-300 hover:shadow-lg'}`}
+                    className={`border rounded-lg p-3 transition cursor-pointer group ${isDarkMode ? 'bg-gray-700 border-gray-600 hover:border-green-500 hover:shadow-lg' : 'bg-white border-gray-200 hover:border-green-300 hover:shadow-lg'}`}
                   >
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isDarkMode ? 'bg-green-900 text-green-400' : 'bg-green-100 text-green-600'}`}>
-                        <BookOpen size={20} />
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDarkMode ? 'bg-green-900 text-green-400' : 'bg-green-100 text-green-600'}`}>
+                        <BookOpen size={18} />
                       </div>
-                      <h3 className={`text-lg font-semibold flex-1 transition ${isDarkMode ? 'text-white group-hover:text-green-400' : 'text-gray-900 group-hover:text-green-600'}`}>{subject}</h3>
+                      <h3 className={`text-sm font-semibold flex-1 transition ${isDarkMode ? 'text-white group-hover:text-green-400' : 'text-gray-900 group-hover:text-green-600'}`}>{subject}</h3>
                     </div>
                     <div className={`flex items-center text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                       <span>View chapters</span>

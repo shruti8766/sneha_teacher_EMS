@@ -104,7 +104,8 @@ const UserProfileCard: React.FC = () => {
           <div className="py-2">
             <button 
               onClick={() => {
-                navigate('/profile');
+                const profilePath = user?.role === 'student' ? '/student/profile' : '/profile';
+                navigate(profilePath);
                 setIsOpen(false);
               }}
               className={`w-full px-4 py-2 flex items-center gap-3 transition-colors duration-300 text-left ${
@@ -116,20 +117,23 @@ const UserProfileCard: React.FC = () => {
               <User size={18} className={isDarkMode ? 'text-gray-400' : 'text-gray-600'} />
               <span>View Profile</span>
             </button>
-            <button 
-              onClick={() => {
-                navigate('/settings');
-                setIsOpen(false);
-              }}
-              className={`w-full px-4 py-2 flex items-center gap-3 transition-colors duration-300 text-left ${
-                isDarkMode
-                  ? 'text-gray-300 hover:bg-gray-700'
-                  : 'text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              <Settings size={18} className={isDarkMode ? 'text-gray-400' : 'text-gray-600'} />
-              <span>Settings</span>
-            </button>
+            {/* Only show Settings for admin */}
+            {user?.role === 'admin' && (
+              <button 
+                onClick={() => {
+                  navigate('/settings');
+                  setIsOpen(false);
+                }}
+                className={`w-full px-4 py-2 flex items-center gap-3 transition-colors duration-300 text-left ${
+                  isDarkMode
+                    ? 'text-gray-300 hover:bg-gray-700'
+                    : 'text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <Settings size={18} className={isDarkMode ? 'text-gray-400' : 'text-gray-600'} />
+                <span>Settings</span>
+              </button>
+            )}
           </div>
 
           {/* Logout Button */}

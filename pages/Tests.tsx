@@ -182,18 +182,18 @@ const Tests: React.FC = () => {
   };
 
   return (
-    <div className={`space-y-6 min-h-screen px-4 md:px-8 py-6 ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
+    <div className={`space-y-4 min-h-screen px-4 md:px-6 py-4 ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
       <div className="flex items-center justify-between">
-        <h1 className={`text-3xl font-bold flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-          <ClipboardList className="text-indigo-600" size={36} />
+        <h1 className={`text-2xl font-bold flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+          <ClipboardList className="text-indigo-600" size={28} />
           Tests
         </h1>
         {user?.role === 'admin' && (
           <button
             onClick={() => setIsModalOpen(true)}
-            className="bg-purple-600 text-white px-6 py-2.5 rounded-lg hover:bg-purple-700 transition flex items-center gap-2 font-medium shadow-sm"
+            className="bg-purple-600 text-white px-4 py-2 text-sm rounded-lg hover:bg-purple-700 transition flex items-center gap-2 font-medium shadow-sm"
           >
-            <Plus size={20} /> Schedule Test
+            <Plus size={18} /> Schedule Test
           </button>
         )}
       </div>
@@ -201,14 +201,14 @@ const Tests: React.FC = () => {
       {loading ? (
         <div className="flex justify-center p-8"><Loader2 className="animate-spin text-purple-600" /></div>
       ) : tests.length === 0 ? (
-        <div className={`text-center p-8 rounded-xl border ${isDarkMode ? 'bg-gray-800 border-gray-700 text-gray-400' : 'bg-white border-gray-100 text-gray-500'}`}>No tests scheduled.</div>
+        <div className={`text-center p-6 rounded-lg border ${isDarkMode ? 'bg-gray-800 border-gray-700 text-gray-400' : 'bg-white border-gray-100 text-gray-500'}`}>No tests scheduled.</div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {tests.map(test => (
-            <div key={test.id} className={`p-6 rounded-xl shadow-sm border transition ${isDarkMode ? 'bg-gray-800 border-gray-700 hover:shadow-lg' : 'bg-white border-gray-100 hover:shadow-md'}`}>
-              <div className="flex justify-between items-start mb-4">
+            <div key={test.id} className={`p-4 rounded-lg shadow-sm border transition ${isDarkMode ? 'bg-gray-800 border-gray-700 hover:shadow-lg' : 'bg-white border-gray-100 hover:shadow-md'}`}>
+              <div className="flex justify-between items-start mb-3">
                 <div className="flex-1">
-                  <h3 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{test.title || test.subject}</h3>
+                  <h3 className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{test.title || test.subject}</h3>
                   <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{test.subject} • {test.board} • Std {test.standard}</p>
                   {(test as any).batchId && (
                     <span className={`inline-flex items-center gap-1 mt-1 text-xs px-2 py-0.5 rounded-full ${isDarkMode ? 'bg-orange-900 text-orange-300' : 'bg-orange-100 text-orange-700'}`}>
@@ -232,41 +232,41 @@ const Tests: React.FC = () => {
                         className={`transition p-1 ${isDarkMode ? 'text-gray-400 hover:text-blue-400' : 'text-gray-400 hover:text-blue-600'}`}
                         title="Edit test"
                       >
-                        <Edit2 size={16} />
+                        <Edit2 size={14} />
                       </button>
                       <button
                         onClick={() => handleDelete(test.id, test.title || test.subject)}
                         className={`transition p-1 ${isDarkMode ? 'text-gray-400 hover:text-red-400' : 'text-gray-400 hover:text-red-600'}`}
                         title="Delete test"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={14} />
                       </button>
                     </div>
                   )}
                 </div>
               </div>
               
-              <div className={`grid grid-cols-2 gap-4 text-sm p-4 rounded-lg ${isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>
+              <div className={`grid grid-cols-2 gap-3 text-xs p-3 rounded-lg ${isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>
                 <div className="flex items-center gap-2">
-                  <Calendar size={16} className={isDarkMode ? 'text-purple-400' : 'text-purple-500'} />
+                  <Calendar size={14} className={isDarkMode ? 'text-purple-400' : 'text-purple-500'} />
                   <span>{test.dateTime ? new Date(test.dateTime).toLocaleDateString() : 'N/A'}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Clock size={16} className={isDarkMode ? 'text-purple-400' : 'text-purple-500'} />
+                  <Clock size={14} className={isDarkMode ? 'text-purple-400' : 'text-purple-500'} />
                   <span>{test.dateTime ? new Date(test.dateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'N/A'}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <FileText size={16} className={isDarkMode ? 'text-purple-400' : 'text-purple-500'} />
+                  <FileText size={14} className={isDarkMode ? 'text-purple-400' : 'text-purple-500'} />
                   <span>{test.duration || test.durationMin || 'N/A'} mins</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Award size={16} className={isDarkMode ? 'text-purple-400' : 'text-purple-500'} />
+                  <Award size={14} className={isDarkMode ? 'text-purple-400' : 'text-purple-500'} />
                   <span>{test.totalMarks || test.maxMarks || 'N/A'} Marks</span>
                 </div>
               </div>
               
               {test.description && (
-                <p className={`mt-4 text-sm line-clamp-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{test.description}</p>
+                <p className={`mt-3 text-xs line-clamp-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{test.description}</p>
               )}
 
               <div className={`mt-4 pt-4 border-t flex gap-2 ${isDarkMode ? 'border-gray-700' : 'border-gray-100'}`}>
@@ -283,7 +283,7 @@ const Tests: React.FC = () => {
         </div>
       )}
 
-      <Modal isOpen={isModalOpen} onClose={handleModalClose} title={editingTest ? 'Edit Test' : 'Schedule New Test'}>
+      <Modal isOpen={isModalOpen} onClose={handleModalClose} title={editingTest ? 'Edit Test' : 'Schedule New Test'} isDarkMode={isDarkMode}>
         <form onSubmit={handleCreate} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>

@@ -42,16 +42,32 @@ const Batches: React.FC = () => {
     try {
       const response = await api.get<ApiListResponse<Batch>>('/batches?limit=100');
       console.log('Loaded batches:', response.items);
-      response.items.forEach(batch => {
+      
+      // Enrich batches with cached teacher info (backend persistence workaround)
+      const batchTeacherMap = JSON.parse(localStorage.getItem('batchTeacherMap') || '{}');
+      const enrichedBatches = response.items.map(batch => {
+        if (!batch.teacherId && batchTeacherMap[batch.id]) {
+          return {
+            ...batch,
+            teacherId: batchTeacherMap[batch.id].teacherId,
+            teacherName: batchTeacherMap[batch.id].teacherName
+          };
+        }
+        return batch;
+      });
+      
+      enrichedBatches.forEach(batch => {
         console.log(`Batch ${batch.name}:`, {
           id: batch.id,
           studentIds: batch.studentIds,
           studentIdsType: typeof batch.studentIds,
           studentIdsLength: batch.studentIds?.length,
+          teacherId: batch.teacherId,
+          teacherName: batch.teacherName,
           fullBatch: batch
         });
       });
-      setBatches(response.items);
+      setBatches(enrichedBatches);
     } catch (error) {
       showToast('Failed to load batches', 'error');
     } finally {
@@ -122,7 +138,7 @@ const Batches: React.FC = () => {
       console.log('Delete response:', response);
       
       // Only remove from local state if we get a successful response
-      if (response && (response.ok || response.ok === undefined)) {
+      if (response && ((response as any).ok || (response as any).ok === undefined)) {
         setBatches(prev => prev.filter(b => b.id !== batchId));
         showToast('Batch deleted successfully', 'success');
       } else {
@@ -157,12 +173,24 @@ const Batches: React.FC = () => {
         standard: parseInt(formData.standard),
         maxStudents: formData.maxStudents ? parseInt(formData.maxStudents) : undefined,
         studentIds: selectedStudents.map(s => s.id),
+        teacherId: formData.teacherId,
         teacherName: teacherName
       };
       console.log('Creating batch with payload:', payload);
       console.log('Selected students count:', selectedStudents.length);
       const response = await api.post('/batches', payload);
       console.log('Batch creation response:', response);
+      
+      // Save teacher assignment to localStorage as backup (backend persistence workaround)
+      if (formData.teacherId && (response as any)?.id) {
+        const batchTeacherMap = JSON.parse(localStorage.getItem('batchTeacherMap') || '{}');
+        batchTeacherMap[(response as any).id] = {
+          teacherId: formData.teacherId,
+          teacherName: teacherName
+        };
+        localStorage.setItem('batchTeacherMap', JSON.stringify(batchTeacherMap));
+      }
+      
       console.warn('⚠️ BACKEND BUG: studentIds field is not being persisted by the backend. Frontend sends studentIds array but backend returns empty array on GET /batches');
       showToast('Batch created successfully (Note: Student enrollment not working due to backend issue)', 'success');
       setIsModalOpen(false);
@@ -206,18 +234,18 @@ const Batches: React.FC = () => {
   };
 
   return (
-    <div className={`space-y-6 min-h-screen px-4 md:px-8 py-6 ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
+    <div className={`space-y-4 min-h-screen px-3 md:px-6 py-4 ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
       <div className="flex items-center justify-between">
-        <h1 className={`text-3xl font-bold flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-          <BookOpen className="text-orange-600" size={36} />
+        <h1 className={`text-2xl font-bold flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+          <BookOpen className="text-orange-600" size={28} />
           Batches
         </h1>
         {user?.role === 'admin' && (
           <button
             onClick={() => setIsModalOpen(true)}
-            className="bg-orange-600 text-white px-6 py-2.5 rounded-lg hover:bg-orange-700 transition flex items-center gap-2 font-medium shadow-sm"
+            className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition flex items-center gap-1.5 font-medium shadow-sm text-sm"
           >
-            <Plus size={20} /> Create Batch
+            <Plus size={18} /> Create Batch
           </button>
         )}
       </div>
@@ -227,36 +255,36 @@ const Batches: React.FC = () => {
       ) : batches.length === 0 ? (
          <div className={`text-center p-8 rounded-xl border ${isDarkMode ? 'text-gray-400 bg-gray-800 border-gray-700' : 'text-gray-500 bg-white border-gray-100'}`}>No batches found.</div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {batches.map(batch => (
             <div
               key={batch.id}
               onClick={() => navigate(`/batches/${batch.id}`)}
-              className={`p-6 rounded-xl shadow-sm border transition cursor-pointer ${isDarkMode ? 'bg-gray-800 border-gray-700 hover:shadow-md hover:border-orange-600' : 'bg-white border-gray-100 hover:shadow-md hover:border-orange-200'}`}
+              className={`p-4 rounded-lg shadow-sm border transition cursor-pointer ${isDarkMode ? 'bg-gray-800 border-gray-700 hover:shadow-md hover:border-orange-600' : 'bg-white border-gray-100 hover:shadow-md hover:border-orange-200'}`}
             >
-              <div className="flex items-start justify-between mb-3">
-                <h3 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{batch.name}</h3>
+              <div className="flex items-start justify-between mb-2">
+                <h3 className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{batch.name}</h3>
                 {user?.role === 'admin' && (
                   <button
                     onClick={(e) => handleDeleteBatch(batch.id, batch.name, e)}
                     className="text-red-600 hover:text-red-700 hover:bg-red-50 p-1 rounded-lg transition"
                     title="Delete batch"
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={14} />
                   </button>
                 )}
               </div>
-              <div className={`text-sm mb-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{batch.subject} • {batch.board} • Std {batch.standard}</div>
+              <div className={`text-xs mb-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{batch.subject} • {batch.board} • Std {batch.standard}</div>
               
               {batch.teacherName && (
-                <div className={`flex items-center gap-2 text-sm p-2 rounded-lg mb-2 ${isDarkMode ? 'bg-blue-900 border border-blue-700' : 'bg-blue-50 border border-blue-100'}`}>
-                  <UserCheck size={16} className={isDarkMode ? 'text-blue-400' : 'text-blue-600'} />
+                <div className={`flex items-center gap-1.5 text-xs p-1.5 rounded-lg mb-2 ${isDarkMode ? 'bg-blue-900 border border-blue-700' : 'bg-blue-50 border border-blue-100'}`}>
+                  <UserCheck size={14} className={isDarkMode ? 'text-blue-400' : 'text-blue-600'} />
                   <span className={`font-medium ${isDarkMode ? 'text-blue-300' : 'text-blue-700'}`}>{batch.teacherName}</span>
                 </div>
               )}
               
-              <div className={`flex items-center gap-2 text-sm p-2 rounded-lg ${isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>
-                <Users size={16} />
+              <div className={`flex items-center gap-1.5 text-xs p-1.5 rounded-lg ${isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-50 text-gray-600'}`}>
+                <Users size={14} />
                 <span>{batch.studentIds?.length || 0} Students enrolled</span>
               </div>
             </div>
@@ -264,7 +292,7 @@ const Batches: React.FC = () => {
         </div>
       )}
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Create New Batch">
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Create New Batch" isDarkMode={isDarkMode}>
         <form onSubmit={handleCreate} className="space-y-4">
           <div>
             <label className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Batch Name *</label>

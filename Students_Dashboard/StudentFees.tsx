@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { useDarkMode } from '../context/DarkModeContext';
 import { api } from '../services/api';
 import { DollarSign, CreditCard, TrendingUp, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
 
@@ -31,6 +32,7 @@ interface FeeStats {
 const StudentFees: React.FC = () => {
   const { user } = useAuth();
   const { showToast } = useToast();
+  const { isDarkMode } = useDarkMode();
   const [stats, setStats] = useState<FeeStats>({
     totalPaid: 0,
     outstandingBalance: 0,
@@ -231,61 +233,62 @@ const StudentFees: React.FC = () => {
 
   const getPaymentMethodBadge = (method: string) => {
     const colors: { [key: string]: string } = {
-      cash: 'bg-green-100 text-green-800',
-      online: 'bg-blue-100 text-blue-800',
-      cheque: 'bg-purple-100 text-purple-800',
-      card: 'bg-red-100 text-red-800'
+      cash: isDarkMode ? 'bg-green-900 text-green-300' : 'bg-green-100 text-green-800',
+      online: isDarkMode ? 'bg-blue-900 text-blue-300' : 'bg-blue-100 text-blue-800',
+      cheque: isDarkMode ? 'bg-purple-900 text-purple-300' : 'bg-purple-100 text-purple-800',
+      card: isDarkMode ? 'bg-red-900 text-red-300' : 'bg-red-100 text-red-800'
     };
-    return colors[method] || 'bg-gray-100 text-gray-800';
+    return colors[method] || (isDarkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-800');
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
+      <div className={`flex items-center justify-center h-96 ${isDarkMode ? 'bg-gray-900' : 'bg-white'}`}>
+        <Loader2 className="animate-spin text-blue-600" size={48} />
       </div>
     );
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className={`min-h-screen px-4 md:px-8 py-6 ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
+      <div className="space-y-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Fee Management</h1>
-        <p className="text-gray-600">View your fee plan and payment history</p>
+      <div>
+        <h1 className={`text-3xl font-bold mb-2 flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}><DollarSign size={40} className="text-purple-600" />Fee Management</h1>
+        <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>View your fee plan and payment history</p>
       </div>
 
       {/* Fee Plan Overview */}
       {stats.feePlan ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Current Fee Plan */}
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className={`rounded-lg shadow-sm border p-6 ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
             <div className="flex items-center mb-4">
-              <DollarSign className="w-5 h-5 mr-2 text-gray-600" />
-              <h2 className="text-xl font-semibold">Current Fee Plan</h2>
+              <DollarSign className={`w-5 h-5 mr-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`} />
+              <h2 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Current Fee Plan</h2>
             </div>
-            <div className="space-y-3">
+            <div className={`space-y-3 divide-y ${isDarkMode ? 'divide-gray-700' : 'divide-gray-100'}`}>
               <div className="flex justify-between">
-                <span className="text-gray-600">Amount</span>
-                <span className="font-medium">
+                <span className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>Amount</span>
+                <span className={`font-medium ${isDarkMode ? 'text-white' : ''}`}>
                   {stats.feePlan.currency} {stats.feePlan.amount}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Frequency</span>
-                <span className="font-medium capitalize">{stats.feePlan.frequency}</span>
+              <div className="flex justify-between pt-3">
+                <span className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>Frequency</span>
+                <span className={`font-medium capitalize ${isDarkMode ? 'text-white' : ''}`}>{stats.feePlan.frequency}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Status</span>
-                <span className="flex items-center text-green-700 bg-green-100 px-2 py-1 rounded text-sm">
+              <div className="flex justify-between pt-3">
+                <span className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>Status</span>
+                <span className={`flex items-center px-2 py-1 rounded text-sm font-medium ${isDarkMode ? 'bg-green-900 text-green-300' : 'text-green-700 bg-green-100'}`}>
                   <CheckCircle className="w-4 h-4 mr-1" />
                   Active
                 </span>
               </div>
               {stats.nextDueDate && (
-                <div className="flex justify-between pt-2 border-t">
-                  <span className="text-gray-600">Next Due Date</span>
-                  <span className="font-medium">{stats.nextDueDate}</span>
+                <div className="flex justify-between pt-3">
+                  <span className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>Next Due Date</span>
+                  <span className={`font-medium ${isDarkMode ? 'text-white' : ''}`}>{stats.nextDueDate}</span>
                 </div>
               )}
             </div>
@@ -293,11 +296,11 @@ const StudentFees: React.FC = () => {
 
           {/* Payment Summary */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-green-50 rounded-lg shadow-md p-4 border-l-4 border-green-500">
+            <div className={`rounded-lg shadow-sm p-4 border-l-4 ${isDarkMode ? 'bg-gray-800 border-green-700' : 'bg-green-50 border-green-500'}`}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-green-600">Total Paid</p>
-                  <p className="text-2xl font-bold text-green-700">
+                  <p className={`text-sm ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>Total Paid</p>
+                  <p className={`text-2xl font-bold ${isDarkMode ? 'text-green-300' : 'text-green-700'}`}>
                     {stats.feePlan.currency} {stats.totalPaid}
                   </p>
                 </div>
@@ -305,13 +308,13 @@ const StudentFees: React.FC = () => {
               </div>
             </div>
 
-            <div className={`${stats.outstandingBalance > 0 ? 'bg-red-50 border-red-500' : 'bg-blue-50 border-blue-500'} rounded-lg shadow-md p-4 border-l-4`}>
+            <div className={`rounded-lg shadow-sm p-4 border-l-4 ${stats.outstandingBalance > 0 ? (isDarkMode ? 'bg-gray-800 border-red-700' : 'bg-red-50 border-red-500') : (isDarkMode ? 'bg-gray-800 border-blue-700' : 'bg-blue-50 border-blue-500')}`}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className={`text-sm ${stats.outstandingBalance > 0 ? 'text-red-600' : 'text-blue-600'}`}>
+                  <p className={`text-sm ${stats.outstandingBalance > 0 ? (isDarkMode ? 'text-red-400' : 'text-red-600') : (isDarkMode ? 'text-blue-400' : 'text-blue-600')}`}>
                     Outstanding Balance
                   </p>
-                  <p className={`text-2xl font-bold ${stats.outstandingBalance > 0 ? 'text-red-700' : 'text-blue-700'}`}>
+                  <p className={`text-2xl font-bold ${stats.outstandingBalance > 0 ? (isDarkMode ? 'text-red-300' : 'text-red-700') : (isDarkMode ? 'text-blue-300' : 'text-blue-700')}`}>
                     {stats.feePlan.currency} {stats.outstandingBalance}
                   </p>
                 </div>
@@ -325,18 +328,18 @@ const StudentFees: React.FC = () => {
           </div>
         </div>
       ) : (
-        <div className="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-6 mb-6">
+        <div className={`border-l-4 rounded-lg p-6 ${isDarkMode ? 'bg-blue-900 border-blue-700' : 'bg-blue-50 border-blue-500'}`}>
           <div className="flex items-start">
-            <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
+            <AlertCircle className={`w-5 h-5 mt-0.5 mr-3 flex-shrink-0 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} />
             <div>
-              <h3 className="font-medium text-blue-900">No Fee Plan Assigned</h3>
-              <p className="text-blue-800 text-sm mt-1">
+              <h3 className={`font-medium ${isDarkMode ? 'text-blue-300' : 'text-blue-900'}`}>No Fee Plan Assigned</h3>
+              <p className={`text-sm mt-1 ${isDarkMode ? 'text-blue-400' : 'text-blue-800'}`}>
                 You don't have a fee plan assigned yet. Please contact your teacher/admin.
               </p>
               {stats.totalPaid > 0 && (
-                <div className="mt-3 p-3 bg-white rounded border border-blue-200">
-                  <p className="text-sm font-medium text-gray-900">Total Payments Made:</p>
-                  <p className="text-2xl font-bold text-green-600">₹{stats.totalPaid}</p>
+                <div className={`mt-3 p-3 rounded border ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-white border-blue-200'}`}>
+                  <p className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Total Payments Made:</p>
+                  <p className={`text-2xl font-bold ${isDarkMode ? 'text-green-400' : 'text-green-600'}`}>₹{stats.totalPaid}</p>
                 </div>
               )}
             </div>
@@ -345,38 +348,38 @@ const StudentFees: React.FC = () => {
       )}
 
       {/* Payment History */}
-      <div className="bg-white rounded-lg shadow-md">
-        <div className="p-6 border-b">
+      <div className={`rounded-lg shadow-sm border overflow-hidden ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
+        <div className={`p-6 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-100'}`}>
           <div className="flex items-center">
-            <CreditCard className="w-5 h-5 mr-2 text-gray-600" />
-            <h2 className="text-xl font-semibold">Payment History</h2>
+            <CreditCard className={`w-5 h-5 mr-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`} />
+            <h2 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Payment History</h2>
           </div>
         </div>
 
         {payments.length === 0 ? (
-          <div className="text-center py-12 px-6">
-            <CreditCard className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No payments recorded</h3>
-            <p className="text-gray-600">You haven't made any payments yet</p>
+          <div className={`text-center py-12 px-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+            <CreditCard className={`w-16 h-16 mx-auto mb-4 ${isDarkMode ? 'text-gray-600' : 'text-gray-400'}`} />
+            <h3 className={`text-lg font-medium mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>No payments recorded</h3>
+            <p>You haven't made any payments yet</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+              <thead className={`border-b ${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-100'}`}>
                 <tr>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-900">Date</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-900">Amount</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-900">Method</th>
-                  <th className="px-6 py-3 text-left text-sm font-medium text-gray-900">Note</th>
+                  <th className={`px-6 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Date</th>
+                  <th className={`px-6 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Amount</th>
+                  <th className={`px-6 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Method</th>
+                  <th className={`px-6 py-3 text-left text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>Note</th>
                 </tr>
               </thead>
-              <tbody className="divide-y">
+              <tbody className={`divide-y ${isDarkMode ? 'divide-gray-700' : 'divide-gray-100'}`}>
                 {payments.map((payment: Payment) => (
-                  <tr key={payment.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm text-gray-900">
+                  <tr key={payment.id} className={`${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
+                    <td className={`px-6 py-4 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
                       {formatDate(payment.recordedAt)}
                     </td>
-                    <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                    <td className={`px-6 py-4 text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-900'}`}>
                       {payment.amount}
                     </td>
                     <td className="px-6 py-4 text-sm">
@@ -384,7 +387,7 @@ const StudentFees: React.FC = () => {
                         {payment.method}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
+                    <td className={`px-6 py-4 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                       {payment.note || '-'}
                     </td>
                   </tr>
@@ -393,6 +396,7 @@ const StudentFees: React.FC = () => {
             </table>
           </div>
         )}
+      </div>
       </div>
     </div>
   );

@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useDarkMode } from '../context/DarkModeContext';
 import { Loader2, Plus, Clock, MapPin, Edit2, Trash2, Calendar, ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
 import Modal from '../components/Modal';
+import { pushNotifications } from '../services/pushNotifications';
 
 const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const TIME_SLOTS = [
@@ -121,7 +122,9 @@ const Timetable: React.FC = () => {
       
       setSchedules(enrichedSchedules);
       setBatches(batchesRes.items || []);
-      setTeachers(teachersRes.items || []);
+      // Filter out inactive/deleted teachers - treat undefined/missing active field as true
+      const activeTeachers = (teachersRes.items || []).filter(t => t.active !== false);
+      setTeachers(activeTeachers);
     } catch (error) {
       // API not available - try fallback to GET /schedules
       console.error('❌ Failed to load timetable data:', error);
@@ -145,7 +148,9 @@ const Timetable: React.FC = () => {
       
       try {
         const teachersRes = await api.get<ApiListResponse<Teacher>>('/teachers?limit=100');
-        setTeachers(teachersRes.items || []);
+        // Filter out inactive/deleted teachers
+        const activeTeachers = (teachersRes.items || []).filter(t => t.active !== false);
+        setTeachers(activeTeachers);
       } catch (e) {
         setTeachers([]);
       }
@@ -212,6 +217,7 @@ const Timetable: React.FC = () => {
         showToast('Schedule updated successfully');
       } else {
         // Create schedules for all selected days
+        const createdSchedules = [];
         for (const day of daysToSchedule) {
           const payload = {
             batchId: formData.batchId,
@@ -228,8 +234,99 @@ const Timetable: React.FC = () => {
           console.log(`📝 Creating schedule for ${day}:`, payload);
           const response = await api.post('/schedules', payload);
           console.log(`✅ Schedule created for ${day}:`, response);
+          createdSchedules.push({
+            day,
+            scheduleId: response.scheduleId,
+            notificationsCreated: response.notificationsCreated
+          });
+
+          // Automatically create an attendance session for this schedule
+          try {
+            const today = new Date();
+            const dayIndex = DAYS_OF_WEEK.indexOf(day);
+            const sessionDate = new Date(today);
+            const currentDayIndex = today.getDay();
+            // Adjust: Sunday is 0, Monday is 1, etc. But DAYS_OF_WEEK starts with Monday
+            const adjustedCurrentDay = currentDayIndex === 0 ? 6 : currentDayIndex - 1;
+            const daysUntil = (dayIndex - adjustedCurrentDay + 7) % 7;
+            sessionDate.setDate(today.getDate() + daysUntil);
+
+            const sessionPayload = {
+              batchId: formData.batchId,
+              date: sessionDate.toISOString().slice(0, 10),
+              subject: formData.subject,
+              startTime: formData.startTime,
+              endTime: formData.endTime,
+              topic: ''
+            };
+            console.log(`📚 Creating attendance session for ${day}:`, sessionPayload);
+            const sessionResponse = await api.post('/attendance/sessions', sessionPayload);
+            console.log(`✅ Attendance session created for ${day}:`, sessionResponse);
+          } catch (err) {
+            console.warn(`⚠️ Failed to create attendance session for ${day}:`, err);
+            // Don't fail the schedule creation if session creation fails
+          }
         }
-        showToast(`${daysToSchedule.length} schedule(s) created successfully`);
+
+        // Create messages and notifications for admin and students
+        const totalNotifications = createdSchedules.reduce((sum, s) => sum + s.notificationsCreated, 0);
+        const daysText = daysToSchedule.join(', ');
+        
+        // 1. Create a message for the admin about the schedule creation
+        const adminScheduleMessage = {
+          title: `📅 Schedule Created: ${batch?.name}`,
+          content: `A new class schedule has been successfully created and shared with students.\n\n📚 Class Details:\n   Batch: ${batch?.name}\n   Subject: ${formData.subject}\n   Teacher: ${teacher?.name}\n   Time: ${formData.startTime} - ${formData.endTime}\n   Room: ${formData.room || 'To be assigned'}\n   Days: ${daysText}\n\n👥 Total Students Notified: ${totalNotifications}\n\nAll students in this batch have been automatically notified of their new schedule.`,
+          type: 'announcement',
+          priority: 'high',
+          recipientType: 'board',
+          board: 'admin'
+        };
+
+        try {
+          const adminMsgRes = await api.post('/messages', adminScheduleMessage);
+          console.log('✅ Admin notification message created');
+        } catch (err) {
+          console.warn('⚠️ Failed to create admin message:', err);
+        }
+
+        // 2. Create a message for students in the batch
+        if (batch?.studentIds && batch.studentIds.length > 0) {
+          const studentScheduleMessage = {
+            title: `📚 New Class Schedule: ${formData.subject}`,
+            content: `A new class schedule has been added for your batch.\n\n📋 Class Information:\n   Subject: ${formData.subject}\n   Batch: ${batch?.name}\n   Teacher: ${teacher?.name}\n   Time: ${formData.startTime} - ${formData.endTime}\n   Location: ${formData.room || 'To be announced'}\n   Days: ${daysText}\n\nPlease update your schedule accordingly and make a note of these timing.`,
+            type: 'announcement',
+            priority: 'high',
+            recipientType: 'batch',
+            batchId: formData.batchId,
+            recipientIds: batch.studentIds
+          };
+
+          try {
+            const studentMsgRes = await api.post('/messages', studentScheduleMessage);
+            console.log(`✅ Schedule notification sent to ${batch.studentIds.length} student(s)`);
+          } catch (err) {
+            console.warn('⚠️ Failed to create student message:', err);
+          }
+        }
+
+        // 3. Send browser push notification if enabled
+        try {
+          if (pushNotifications.isSupported() && pushNotifications.getPermission() === 'granted') {
+            await pushNotifications.showNotification(`📅 Schedule Created: ${batch?.name}`, {
+              body: `${formData.subject} - ${formData.startTime} to ${formData.endTime} on ${daysText}`,
+              icon: '/favicon.ico',
+              tag: 'schedule-created',
+              data: {
+                url: '/#/timetable'
+              }
+            });
+            console.log('✅ Browser push notification sent');
+          }
+        } catch (err) {
+          console.warn('⚠️ Failed to send push notification:', err);
+        }
+
+        showToast(`✅ Schedule created! ${totalNotifications} student(s) notified`);
       }
 
       setIsModalOpen(false);
@@ -333,14 +430,14 @@ const Timetable: React.FC = () => {
   };
 
   return (
-    <div className={`space-y-6 min-h-screen px-4 md:px-8 py-6 ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
+    <div className={`space-y-4 min-h-screen px-3 md:px-6 py-4 ${isDarkMode ? 'bg-gray-900' : 'bg-blue-50'}`}>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className={`text-3xl font-bold flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-            <CalendarDays className="text-red-600" size={36} />
+          <h1 className={`text-2xl font-bold flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+            <CalendarDays className="text-red-600" size={28} />
             Class Timetable
           </h1>
-          <p className={`mt-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Manage weekly class schedules</p>
+          <p className={`mt-0.5 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Manage weekly class schedules</p>
         </div>
         {isAdmin && (
           <button
@@ -360,32 +457,32 @@ const Timetable: React.FC = () => {
               setAvailabilityMessage(null);
               setIsModalOpen(true);
             }}
-            className="bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 transition flex items-center gap-2 font-medium shadow-sm"
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-1.5 font-medium shadow-sm text-sm"
           >
-            <Plus size={20} /> Add Schedule
+            <Plus size={18} /> Add Schedule
           </button>
         )}
       </div>
 
       {/* Week Navigation */}
-      <div className={`rounded-xl shadow-sm border p-4 flex items-center justify-between ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
+      <div className={`rounded-lg shadow-sm border p-3 flex items-center justify-between ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
         <button
           onClick={() => setCurrentWeek(prev => prev - 1)}
-          className={`p-2 rounded-lg transition ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+          className={`p-1.5 rounded-lg transition ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
         >
-          <ChevronLeft size={20} className={isDarkMode ? 'text-gray-300' : 'text-gray-700'} />
+          <ChevronLeft size={18} className={isDarkMode ? 'text-gray-300' : 'text-gray-700'} />
         </button>
         <div className="text-center">
-          <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Week View</p>
-          <p className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+          <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Week View</p>
+          <p className={`text-sm font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
             {currentWeek === 0 ? 'This Week' : currentWeek > 0 ? `${currentWeek} week(s) ahead` : `${Math.abs(currentWeek)} week(s) ago`}
           </p>
         </div>
         <button
           onClick={() => setCurrentWeek(prev => prev + 1)}
-          className={`p-2 rounded-lg transition ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+          className={`p-1.5 rounded-lg transition ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
         >
-          <ChevronRight size={20} className={isDarkMode ? 'text-gray-300' : 'text-gray-700'} />
+          <ChevronRight size={18} className={isDarkMode ? 'text-gray-300' : 'text-gray-700'} />
         </button>
       </div>
 
@@ -394,16 +491,16 @@ const Timetable: React.FC = () => {
           <Loader2 className="animate-spin text-blue-600" size={40} />
         </div>
       ) : (
-        <div className={`rounded-xl shadow-sm border overflow-hidden ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
+        <div className={`rounded-lg shadow-sm border overflow-hidden ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}>
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
                 <tr className={`bg-gradient-to-r ${isDarkMode ? 'from-gray-700 to-gray-600' : 'from-blue-50 to-purple-50'}`}>
-                  <th className={`border p-3 text-left text-sm font-semibold min-w-[100px] ${isDarkMode ? 'border-gray-700 text-gray-300' : 'border-gray-200 text-gray-700'}`}>
+                  <th className={`border p-2 text-left text-xs font-semibold min-w-[80px] ${isDarkMode ? 'border-gray-700 text-gray-300' : 'border-gray-200 text-gray-700'}`}>
                     Time
                   </th>
                   {DAYS_OF_WEEK.map(day => (
-                    <th key={day} className={`border p-3 text-center text-sm font-semibold min-w-[150px] ${isDarkMode ? 'border-gray-700 text-gray-300' : 'border-gray-200 text-gray-700'}`}>
+                    <th key={day} className={`border p-2 text-center text-xs font-semibold min-w-[120px] ${isDarkMode ? 'border-gray-700 text-gray-300' : 'border-gray-200 text-gray-700'}`}>
                       {day}
                     </th>
                   ))}
@@ -416,7 +513,7 @@ const Timetable: React.FC = () => {
                   
                   return (
                     <tr key={time} className={`transition ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
-                      <td className={`border p-3 text-sm font-medium ${isDarkMode ? 'bg-gray-700 border-gray-600 text-gray-300' : 'bg-gray-50 border-gray-200 text-gray-600'}`}>
+                      <td className={`border p-2 text-xs font-medium ${isDarkMode ? 'bg-gray-700 border-gray-600 text-gray-300' : 'bg-gray-50 border-gray-200 text-gray-600'}`}>
                         {time}
                       </td>
                       {DAYS_OF_WEEK.map(day => {
@@ -429,28 +526,28 @@ const Timetable: React.FC = () => {
                         );
 
                         return (
-                          <td key={day} className={`border p-2 align-top ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+                          <td key={day} className={`border p-1.5 align-top ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
                             {relevantSchedule && relevantSchedule.startTime === time && (
                               <div
-                                className={`${getScheduleColor(relevantSchedule.subject)} border-2 rounded-lg p-3 cursor-pointer hover:shadow-md transition group relative`}
+                                className={`${getScheduleColor(relevantSchedule.subject)} border-2 rounded-lg p-2 cursor-pointer hover:shadow-md transition group relative`}
                               >
-                                <div className="font-semibold text-sm mb-1">{relevantSchedule.batchName}</div>
-                                <div className="text-xs mb-1">{relevantSchedule.subject}</div>
-                                <div className="text-xs flex items-center gap-1 mb-1">
-                                  <Clock size={12} />
+                                <div className="font-semibold text-xs mb-0.5">{relevantSchedule.batchName}</div>
+                                <div className="text-xs mb-0.5">{relevantSchedule.subject}</div>
+                                <div className="text-xs flex items-center gap-0.5 mb-0.5">
+                                  <Clock size={10} />
                                   {relevantSchedule.startTime} - {relevantSchedule.endTime}
                                 </div>
                                 {relevantSchedule.teacherName && (
                                   <div className="text-xs opacity-75">{relevantSchedule.teacherName}</div>
                                 )}
                                 {relevantSchedule.room && (
-                                  <div className="text-xs flex items-center gap-1 mt-1">
-                                    <MapPin size={12} />
+                                  <div className="text-xs flex items-center gap-0.5 mt-0.5">
+                                    <MapPin size={10} />
                                     {relevantSchedule.room}
                                   </div>
                                 )}
                                 {isAdmin && (
-                                  <div className="absolute top-2 right-2 opacity-100 flex gap-1">
+                                  <div className="absolute top-1 right-1 opacity-100 flex gap-0.5">
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
@@ -534,6 +631,7 @@ const Timetable: React.FC = () => {
           setEditingSchedule(null);
         }}
         title={editingSchedule ? `✏️ Edit Schedule - ${editingSchedule.subject}` : '➕ Add New Schedule'}
+        isDarkMode={isDarkMode}
       >
         {editingSchedule && (
           <div className={`mb-4 p-3 rounded-lg border ${isDarkMode ? 'bg-blue-900 border-blue-700' : 'bg-blue-50 border-blue-200'}`}>

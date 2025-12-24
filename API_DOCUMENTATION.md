@@ -1256,6 +1256,48 @@ POST /users/reset-password
 
 ---
 
+## Student Password Management (Admin/Teacher View)
+
+### Get Student's Current Password
+```http
+GET /students/:studentId/password
+```
+**Access:** Admin, Teacher  
+**Response:**
+```json
+{
+  "ok": true,
+  "password": "student_password",
+  "message": "Student password retrieved"
+}
+```
+**Note:** Returns the plain-text password for display in the admin's StudentDetail page.
+
+### Change Student's Password
+```http
+POST /students/:studentId/change-password
+```
+**Access:** Admin, Teacher  
+**Body:**
+```json
+{
+  "newPassword": "NewPassword123"
+}
+```
+**Response:**
+```json
+{
+  "ok": true,
+  "message": "Student password changed successfully"
+}
+```
+**Validations:**
+- `newPassword` must be at least 8 characters long
+- Password is hashed using bcrypt for secure storage
+- Action is logged with timestamp
+
+---
+
 ## Common Patterns
 
 ### Error Response Format
